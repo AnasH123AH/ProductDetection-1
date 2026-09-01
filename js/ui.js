@@ -56,7 +56,7 @@ function showToast(message, type = 'info', duration = 4000) {
 
 function renderSkeletonRows(tbodyEl, cols = 5, rows = 6) {
   if (!tbodyEl) return;
-  const cell = `<td><div class="skeleton" style="height:13px;border-radius:5px;"></div></td>`;
+  const cell = `<td><div class="loading-skeleton" style="height:13px;width:${60 + Math.round(Math.random() * 30)}%;"></div></td>`;
   const row  = `<tr>${Array(cols).fill(cell).join('')}</tr>`;
   tbodyEl.innerHTML = Array(rows).fill(row).join('');
 }
@@ -75,6 +75,47 @@ function renderEmptyState(container, { icon = 'inbox', title = 'No data found', 
       <p class="empty-state-message">${message}</p>
     </div>
   `;
+}
+
+/* ============================================================
+   NUMBER COUNTER ANIMATION
+   ============================================================ */
+
+/**
+ * Animates the text of `el` from its current numeric value to `target` over
+ * `duration` ms. Cancels any counter already running on the element so
+ * repeated calls (e.g. re-navigating to a view) never stack rAF loops.
+ * `format` receives the interpolated number and must return the string to render.
+ */
+function animateCounter(el, target, { duration = 700, format = (n) => Math.round(n).toLocaleString() } = {}) {
+  if (!el) return;
+  if (el._counterRaf) cancelAnimationFrame(el._counterRaf);
+
+  const targetNum = Number(target) || 0;
+  const startNum = Number(String(el.textContent).replace(/[^0-9.\-]/g, '')) || 0;
+
+  if (startNum === targetNum || duration <= 0) {
+    el.textContent = format(targetNum);
+    return;
+  }
+
+  const startTime = performance.now();
+  const easeOutQuad = (t) => 1 - (1 - t) * (1 - t);
+
+  const step = (now) => {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = easeOutQuad(progress);
+    el.textContent = format(startNum + (targetNum - startNum) * eased);
+
+    if (progress < 1) {
+      el._counterRaf = requestAnimationFrame(step);
+    } else {
+      el._counterRaf = null;
+    }
+  };
+
+  el._counterRaf = requestAnimationFrame(step);
 }
 
 /* ============================================================

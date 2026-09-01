@@ -316,6 +316,12 @@
                 <video id="liveVideo" class="live-video-element" autoplay playsinline muted></video>
                 <canvas id="liveOverlayCanvas" class="live-overlay-canvas"></canvas>
 
+                <!-- AI processing chrome: only visible while the camera is actively running -->
+                <div class="ai-active-badge">
+                  <span class="ai-active-dot"></span> AI ACTIVE
+                </div>
+                <div class="ai-scanline" aria-hidden="true"></div>
+
                 <!-- Placeholder when camera is stopped -->
                 <div class="video-placeholder" id="videoPlaceholder">
                   <div class="placeholder-icon">
@@ -365,7 +371,7 @@
             <div class="live-telemetry-panel">
               <div class="telemetry-card-section">
                 <div class="telemetry-section-title">Current Detection</div>
-                <div class="current-detected-box">
+                <div class="current-detected-box" id="currentDetectionBox">
                   <div class="detected-sku-label">RECOGNIZED SKU</div>
                   <div class="current-product-name" id="liveCurrentProduct">No product detected</div>
                   <div class="detected-confidence-value" id="liveCurrentConfidence">0%</div>

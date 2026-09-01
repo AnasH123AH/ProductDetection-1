@@ -123,6 +123,10 @@ const HistoryModule = {
 
     if (!tbody) return;
 
+    if (typeof renderSkeletonRows === 'function') {
+      renderSkeletonRows(tbody, 6, this.pageSize > 8 ? 8 : this.pageSize);
+    }
+
     const offset = (this.currentPage - 1) * this.pageSize;
     const params = {
       limit: this.pageSize,
@@ -144,11 +148,18 @@ const HistoryModule = {
       if (btnNext) btnNext.disabled = this.currentPage * this.pageSize >= this.totalItems;
 
       if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2.5rem; color: #94A3B8;">No live product detections matching criteria.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="padding: 0;"></td></tr>`;
+        if (typeof renderEmptyState === 'function') {
+          renderEmptyState(tbody.querySelector('td'), {
+            icon: 'inbox',
+            title: 'No matching detections',
+            message: 'Try adjusting your search, product filter, or confidence threshold.'
+          });
+        }
         return;
       }
 
-      tbody.innerHTML = items.map(det => {
+      tbody.innerHTML = items.map((det, i) => {
         const pClass = det.product_name.toLowerCase();
         const confPct = Math.round(det.confidence * 100);
         const dateFormatted = this.formatDate(det.created_at);
@@ -156,7 +167,7 @@ const HistoryModule = {
         const sourceLabel = det.source || 'Live Camera';
 
         return `
-          <tr data-det-id="${det.id}">
+          <tr data-det-id="${det.id}" class="row-enter" style="animation-delay: ${Math.min(i, 10) * 25}ms">
             <td style="font-family: var(--font-mono); font-weight: 600; color: #64748B;">#${det.id}</td>
             <td><span class="product-badge ${pClass}">${det.product_name}</span></td>
             <td><span class="conf-pill" style="color: ${confPct >= 90 ? '#059669' : '#D97706'}">${confPct}%</span></td>
@@ -169,6 +180,14 @@ const HistoryModule = {
 
     } catch (err) {
       console.error('Failed to load history:', err);
+      if (typeof renderEmptyState === 'function') {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding: 0;"></td></tr>`;
+        renderEmptyState(tbody.querySelector('td'), {
+          icon: 'inbox',
+          title: 'Unable to load history',
+          message: 'Check the backend connection and try again.'
+        });
+      }
     }
   },
 
