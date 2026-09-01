@@ -269,7 +269,8 @@ def get_real_analytics():
         }
 
     cursor.execute("""
-        SELECT product_name, COUNT(*) as count, AVG(confidence) as avg_conf
+        SELECT product_name, COUNT(*) as count, AVG(confidence) as avg_conf,
+               MIN(confidence) as min_conf, MAX(confidence) as max_conf
         FROM detections
         GROUP BY product_name
         ORDER BY count DESC
@@ -636,7 +637,8 @@ def get_real_analytics():
         }
 
     cursor.execute("""
-        SELECT product_name, COUNT(*) as count, AVG(confidence) as avg_conf
+        SELECT product_name, COUNT(*) as count, AVG(confidence) as avg_conf,
+               MIN(confidence) as min_conf, MAX(confidence) as max_conf
         FROM detections
         GROUP BY product_name
         ORDER BY count DESC
