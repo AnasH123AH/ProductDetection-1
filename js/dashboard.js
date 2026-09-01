@@ -182,7 +182,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Render Charts
       renderProductDistributionChart(stats.distribution);
-      renderRecentDetectionsTable(stats.recent_detections);
+
+      // The dashboard stats endpoint only returns aggregates, not individual
+      // records - fetch the 5 most recent detections separately (same endpoint
+      // Detection History uses) for the "Recent Detection Stream" table.
+      try {
+        const recentRes = await Api.getDetections({ limit: 5, offset: 0 });
+        renderRecentDetectionsTable(recentRes.items || []);
+      } catch (e2) {
+        renderRecentDetectionsTable([]);
+      }
     } catch (e) {
       console.error('Failed to load dashboard data', e);
       if (recentTbody && typeof renderEmptyState === 'function') {

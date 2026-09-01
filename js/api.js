@@ -68,17 +68,41 @@ const Api = {
   },
 
   async getStats() {
-    try {
-      return await this.request('/stats');
-    } catch (e) {
+    // The backend's /api/stats returns { top_sku, by_product, avg_confidence, ... } -
+    // adapt that into the shape the Dashboard actually reads (most_detected.name/count,
+    // distribution, average_confidence) so it never has to guess at backend field names.
+    const adapt = (raw) => {
+      const byProduct = raw.by_product || [];
+      const topEntry = byProduct.find(p => p.product_name === raw.top_sku);
+      const distribution = {};
+      byProduct.forEach(p => { distribution[p.product_name] = { count: p.count }; });
+
       return {
+        total_detections: raw.total_detections || 0,
+        today_detections: raw.today_detections || 0,
+        week_detections: raw.week_detections || 0,
+        average_confidence: raw.avg_confidence || 0,
+        most_detected: {
+          name: raw.top_sku || 'None',
+          count: topEntry ? topEntry.count : 0
+        },
+        distribution,
+        by_product: byProduct
+      };
+    };
+
+    try {
+      const raw = await this.request('/stats');
+      return adapt(raw);
+    } catch (e) {
+      return adapt({
         total_detections: 0,
         today_detections: 0,
         week_detections: 0,
         avg_confidence: 0,
         top_sku: 'None',
         by_product: []
-      };
+      });
     }
   },
 
