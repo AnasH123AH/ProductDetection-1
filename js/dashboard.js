@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     'history': { title: 'Detection History', subtitle: 'Audited log of detected products with bounding boxes' },
     'products': { title: 'Products Catalog', subtitle: 'Target SKU definitions & model detection classes (Trident, Donut, Pickers, Bahia)' },
     'analytics': { title: 'Analytics & Insights', subtitle: 'Product distribution, detection trends, and confidence metrics' },
-    'settings': { title: 'System Settings', subtitle: 'Detection thresholds, camera input, and account preferences' },
+    'settings': { title: 'Settings', subtitle: '' },
     'backend': { title: 'Backend & API Console', subtitle: 'Server health, SQLite database explorer, benchmark, and traffic logs' }
   };
 
