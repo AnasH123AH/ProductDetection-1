@@ -28,11 +28,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pageSubtitle = document.getElementById('pageSubtitle');
 
   const routeMetadata = {
-    'dashboard': { title: 'Detection Dashboard', subtitle: 'Overview of automated CV product detection telemetry' },
-    'live': { title: 'Live Camera Detection', subtitle: 'Real-time inference pipeline & edge camera ingestion' },
-    'history': { title: 'Detection History', subtitle: 'Audited log of detected products with bounding boxes' },
+    'dashboard': { title: 'Dashboard', subtitle: '' },
+    'live': { title: 'Live Camera Detection', subtitle: '' },
+    'history': { title: 'Detection History', subtitle: '' },
     'products': { title: 'Products Catalog', subtitle: 'Target SKU definitions & model detection classes (Trident, Donut, Pickers, Bahia)' },
-    'analytics': { title: 'Analytics & Insights', subtitle: 'Product distribution, detection trends, and confidence metrics' },
+    'analytics': { title: 'Analytics & Insights', subtitle: '' },
     'settings': { title: 'Settings', subtitle: '' },
     'backend': { title: 'Backend & API Console', subtitle: 'Server health, SQLite database explorer, benchmark, and traffic logs' }
   };
