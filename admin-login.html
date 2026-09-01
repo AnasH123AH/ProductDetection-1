@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisionaryAI &mdash; Admin Access</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <style>
+    :root {
+      --admin-bg: #060A12;
+      --admin-card: #0E1520;
+      --admin-border: rgba(255, 255, 255, 0.07);
+      --admin-glow: rgba(139, 92, 246, 0.35);
+      --text-muted: #64748B;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--admin-bg);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Animated Background Grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(139, 92, 246, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 92, 246, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    /* Purple glow orb */
+    .glow-orb {
+      position: fixed;
+      width: 480px;
+      height: 480px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, rgba(6, 10, 18, 0) 70%);
+      pointer-events: none;
+    }
+    .glow-orb-1 { top: -120px; right: -80px; }
+    .glow-orb-2 { bottom: -140px; left: -80px; background: radial-gradient(circle, rgba(2, 132, 199, 0.12) 0%, transparent 70%); }
+
+    /* Admin badge / scanner lines */
+    .scan-line {
+      position: fixed;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.5) 50%, transparent 100%);
+      animation: scan 6s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes scan { 0% { top: -1px; } 100% { top: 100%; } }
+
+    /* --- Card --- */
+    .admin-login-wrap {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      padding: 1rem;
+    }
+
+    .admin-card {
+      background: var(--admin-card);
+      border: 1px solid var(--admin-border);
+      border-radius: 20px;
+      padding: 2.5rem 2.25rem;
+      box-shadow:
+        0 0 0 1px rgba(139, 92, 246, 0.12),
+        0 24px 64px rgba(0, 0, 0, 0.6),
+        0 0 80px var(--admin-glow);
+    }
+
+    /* Header */
+    .admin-card-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .admin-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #C084FC;
+      margin-bottom: 1rem;
+    }
+
+    .admin-card-header h1 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #F8FAFC;
+      margin-bottom: 0.3rem;
+    }
+
+    .admin-card-header p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .restricted-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: #F87171;
+      font-size: 0.7rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: 0.08em;
+      padding: 0.25rem 0.65rem;
+      border-radius: 20px;
+      margin-top: 0.5rem;
+    }
+
+    /* Form */
+    .form-field {
+      margin-bottom: 1.15rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #94A3B8;
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.02em;
+    }
+
+    .form-input-dark {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 0.7rem 1rem;
+      font-size: 0.9rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #F8FAFC;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .form-input-dark::placeholder { color: #475569; }
+
+    .form-input-dark:focus {
+      border-color: rgba(139, 92, 246, 0.55);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+
+    .password-wrap {
+      position: relative;
+    }
+
+    .btn-eye {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      padding: 0.25rem;
+    }
+
+    .btn-eye:hover { color: #94A3B8; }
+
+    /* Submit Button */
+    .btn-admin-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
+      color: #F8FAFC;
+      border: 1px solid rgba(139, 92, 246, 0.5);
+      border-radius: 12px;
+      padding: 0.85rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-top: 1.5rem;
+      box-shadow: 0 4px 24px rgba(124, 58, 237, 0.35);
+    }
+
+    .btn-admin-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(124, 58, 237, 0.5); }
+    .btn-admin-submit:active { transform: translateY(0); }
+    .btn-admin-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* Error message */
+    .error-toast {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 10px;
+      color: #FCA5A5;
+      font-size: 0.82rem;
+      padding: 0.65rem 0.9rem;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .error-toast.visible { display: flex; }
+
+    /* Divider */
+    .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 1.5rem 0; }
+
+    /* Footer link */
+    .admin-footer {
+      text-align: center;
+      font-size: 0.78rem;
+      color: #475569;
+      margin-top: 1.5rem;
+    }
+
+    .admin-footer a { color: #8B5CF6; text-decoration: none; }
+    .admin-footer a:hover { color: #C084FC; }
+
+    /* Loading Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    /* Server status indicator */
+    .server-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #475569;
+      font-family: var(--font-mono);
+      margin-bottom: 1.5rem;
+    }
+
+    .server-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #64748B;
+    }
+
+    .server-dot.online {
+      background: #10B981;
+      box-shadow: 0 0 6px #10B981;
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background effects -->
+  <div class="glow-orb glow-orb-1"></div>
+  <div class="glow-orb glow-orb-2"></div>
+  <div class="scan-line"></div>
+
+  <div class="admin-login-wrap">
+    <div class="admin-card">
+      
+      <!-- Header -->
+      <div class="admin-card-header">
+        <div class="admin-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+        </div>
+        <h1>Visionary<span style="color: #C084FC;">AI</span> Admin</h1>
+        <p>Backend Infrastructure & API Management Console</p>
+        <div class="restricted-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          RESTRICTED ACCESS
+        </div>
+      </div>
+
+      <!-- Server status indicator -->
+      <div class="server-indicator">
+        <span class="server-dot" id="serverDot"></span>
+        <span id="serverStatusText">Checking server status...</span>
+      </div>
+
+      <!-- Error toast -->
+      <div class="error-toast" id="errorToast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorMsg">Invalid credentials.</span>
+      </div>
+
+      <!-- Login Form -->
+      <form id="adminLoginForm" novalidate>
+        
+        <div class="form-field">
+          <label class="form-label" for="adminEmail">Administrator Email</label>
+          <input
+            type="email"
+            id="adminEmail"
+            class="form-input-dark"
+            placeholder="anas.hamma@e-polytechnique.ma"
+            autocomplete="username"
+            required
+          />
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="adminPassword">Admin Password</label>
+          <div class="password-wrap">
+            <input
+              type="password"
+              id="adminPassword"
+              class="form-input-dark"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              style="padding-right: 3rem;"
+              required
+            />
+            <button type="button" class="btn-eye" id="btnTogglePassword" aria-label="Toggle password visibility">
+              <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-admin-submit" id="btnAdminLogin">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+          <span id="btnText">Access Admin Console</span>
+          <div class="spinner" id="btnSpinner"></div>
+        </button>
+
+      </form>
+
+      <div class="divider"></div>
+
+      <!-- Footer -->
+      <div class="admin-footer">
+        <p>Not an admin? &nbsp;<a href="/">Return to Login</a></p>
+        <p style="margin-top: 0.45rem; font-size: 0.72rem;">VisionaryAI · Polytechnique Vision Lab · Internship Project</p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ── Admin Credentials ──────────────────────────────────────────
+    const ADMIN_EMAIL = 'anas.hamma@e-polytechnique.ma';
+    const ADMIN_PASSWORD = 'Anas2004';
+    const SESSION_KEY = 'visionaryai_admin_session';
+
+    // ── Already logged in? Redirect immediately ────────────────────
+    if (sessionStorage.getItem(SESSION_KEY) === 'true' ||
+        localStorage.getItem('visionaryai_user')) {
+      window.location.replace('/admin');
+    }
+
+    // ── Server Status Probe ────────────────────────────────────────
+    const serverDot = document.getElementById('serverDot');
+    const serverStatusText = document.getElementById('serverStatusText');
+
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(d => {
+        serverDot.classList.add('online');
+        serverStatusText.textContent = `API Online · Python 3.11 · ${d.uptime_formatted || 'Active'}`;
+      })
+      .catch(() => {
+        serverStatusText.textContent = 'API Offline — demo mode available';
+      });
+
+    // ── Password toggle ────────────────────────────────────────────
+    const pwInput = document.getElementById('adminPassword');
+    const btnToggle = document.getElementById('btnTogglePassword');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    btnToggle.addEventListener('click', () => {
+      const isHidden = pwInput.type === 'password';
+      pwInput.type = isHidden ? 'text' : 'password';
+      eyeIcon.innerHTML = isHidden
+        ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`
+        : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    });
+
+    // ── Form Submit ────────────────────────────────────────────────
+    const form = document.getElementById('adminLoginForm');
+    const errorToast = document.getElementById('errorToast');
+    const errorMsg = document.getElementById('errorMsg');
+    const btnLogin = document.getElementById('btnAdminLogin');
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorToast.classList.add('visible');
+    }
+
+    function setLoading(state) {
+      btnLogin.disabled = state;
+      btnText.style.display = state ? 'none' : 'flex';
+      btnSpinner.style.display = state ? 'inline-block' : 'none';
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      errorToast.classList.remove('visible');
+
+      const email = document.getElementById('adminEmail').value.trim().toLowerCase();
+      const password = document.getElementById('adminPassword').value;
+
+      if (!email || !password) {
+        showError('Please fill in both fields.');
+        return;
+      }
+
+      setLoading(true);
+
+      // Simulate authentication delay
+      setTimeout(() => {
+        if (email === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
+          // Store admin session
+          sessionStorage.setItem(SESSION_KEY, 'true');
+          localStorage.setItem('visionaryai_user', JSON.stringify({
+            name: 'Anas Hamma',
+            email: 'anas.hamma@e-polytechnique.ma',
+            role: 'Computer Vision Systems Engineer',
+            org: 'Polytechnique Vision Lab',
+            avatar: 'AH'
+          }));
+
+          // Animate and redirect
+          btnText.style.display = 'inline';
+          btnText.textContent = '✓ Verified — Opening Console...';
+          setTimeout(() => window.location.replace('/admin'), 700);
+        } else {
+          setLoading(false);
+          showError('Invalid credentials. Check your admin email and password.');
+          document.getElementById('adminPassword').value = '';
+          document.getElementById('adminPassword').focus();
+        }
+      }, 900);
+    });
+
+    // Allow Enter key on email to jump to password
+    document.getElementById('adminEmail').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('adminPassword').focus();
+    });
+  </script>
+
+</body>
+</html>

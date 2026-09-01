@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisionaryAI &mdash; Enterprise AI Product Detection Platform | Login</title>
+  <meta name="description" content="Access your VisionaryAI dashboard to monitor real-time AI product detection, quality assurance telemetry, and supply chain vision models.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- Favicon SVG -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230284C7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z'/><circle cx='12' cy='12' r='3'/></svg>">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- LEFT SIDE: AI Vision & Corporate Branding Panel -->
+    <aside class="branding-panel" aria-label="Brand and AI Computer Vision Showcase">
+      <!-- Background Ambient Canvas for Real-time AI Bounding Boxes & Telemetry -->
+      <canvas id="aiVisionCanvas" class="ai-canvas" aria-hidden="true"></canvas>
+      
+      <!-- Subtle Grid & Grain Overlays -->
+      <div class="panel-overlay-gradient"></div>
+      <div class="panel-overlay-vignette"></div>
+
+      <div class="branding-content">
+        <!-- Top Navigation / Logo -->
+        <header class="brand-header">
+          <div class="brand-logo-wrap">
+            <div class="brand-logo-icon">
+              <svg class="icon-svg" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="2" y="2" width="24" height="24" rx="6" stroke="currentColor" stroke-width="1.75" stroke-dasharray="3 2" class="scan-frame" />
+                <circle cx="14" cy="14" r="5" fill="currentColor" fill-opacity="0.15" stroke="currentColor" stroke-width="1.75" />
+                <circle cx="14" cy="14" r="1.75" fill="currentColor" />
+                <path d="M7 7L10 7M7 7L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M21 7L18 7M21 7L21 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M7 21L10 21M7 21L7 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <path d="M21 21L18 21M21 21L21 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="brand-name-group">
+              <span class="brand-name">Visionary<span class="brand-highlight">AI</span></span>
+              <span class="brand-badge">ENTERPRISE</span>
+            </div>
+          </div>
+
+          <!-- Live Telemetry Status Pill -->
+          <div class="telemetry-pill" title="Inference Engine Status">
+            <span class="telemetry-dot"></span>
+            <span class="telemetry-text">EDGE INFERENCE: <strong>ONLINE</strong></span>
+          </div>
+        </header>
+
+        <!-- Center AI Hero Showcase -->
+        <div class="ai-hero-showcase">
+          <!-- Live AI Computer Vision HUD Card -->
+          <div class="cv-telemetry-card" id="interactiveHudCard">
+            <div class="cv-card-header">
+              <div class="cv-card-title">
+                <span class="pulse-indicator"></span>
+                <span>LIVE CV INGESTION STREAM</span>
+              </div>
+              <span class="cv-chip">MODEL: YOLO-v9-SUPPLY</span>
+            </div>
+
+            <!-- Visual Stream Simulation -->
+            <div class="cv-stream-box">
+              <div class="cv-crosshair top-left"></div>
+              <div class="cv-crosshair top-right"></div>
+              <div class="cv-crosshair bottom-left"></div>
+              <div class="cv-crosshair bottom-right"></div>
+              <div class="cv-laser-scan"></div>
+              
+              <!-- Simulated Detected BBoxes -->
+              <div class="detected-item item-1">
+                <div class="bbox-tag">
+                  <span class="bbox-label">SKU-9402 [PACKAGING]</span>
+                  <span class="bbox-conf">99.8% CONF</span>
+                </div>
+              </div>
+              
+              <div class="detected-item item-2">
+                <div class="bbox-tag">
+                  <span class="bbox-label">BARCODE-EAN128</span>
+                  <span class="bbox-conf">100% READ</span>
+                </div>
+              </div>
+
+              <div class="stream-stats-bar">
+                <span>FPS: <strong id="fpsCounter">119.8</strong></span>
+                <span>LATENCY: <strong id="latencyCounter">3.8ms</strong></span>
+                <span>ACCURACY: <strong>99.98%</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tagline & Narrative -->
+          <div class="brand-messaging">
+            <h2 class="branding-tagline">
+              Empowering your supply chain with real-time AI product detection.
+            </h2>
+            <p class="branding-description">
+              Autonomous computer vision pipeline delivering millimeter-accurate defect classification, pallet auditing, and high-speed multi-spectral barcode tracking.
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer / Enterprise Trust Badges -->
+        <footer class="branding-footer">
+          <div class="trust-metric">
+            <span class="metric-val">50M+</span>
+            <span class="metric-lbl">Items / Day</span>
+          </div>
+          <div class="trust-divider" aria-hidden="true"></div>
+          <div class="trust-metric">
+            <span class="metric-val">&lt;4.5ms</span>
+            <span class="metric-lbl">Inference Latency</span>
+          </div>
+          <div class="trust-divider" aria-hidden="true"></div>
+          <div class="trust-metric">
+            <span class="metric-val">SOC 2</span>
+            <span class="metric-lbl">Type II Certified</span>
+          </div>
+        </footer>
+      </div>
+    </aside>
+
+
+    <!-- RIGHT SIDE: Modern Enterprise Login Form Container -->
+    <main class="login-panel" role="main">
+      <!-- Mobile Only Header -->
+      <div class="mobile-brand-header">
+        <div class="brand-logo-wrap">
+          <div class="brand-logo-icon">
+            <svg class="icon-svg" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="2" y="2" width="24" height="24" rx="6" stroke="currentColor" stroke-width="1.75" stroke-dasharray="3 2" />
+              <circle cx="14" cy="14" r="5" fill="currentColor" fill-opacity="0.15" stroke="currentColor" stroke-width="1.75" />
+              <circle cx="14" cy="14" r="1.75" fill="currentColor" />
+            </svg>
+          </div>
+          <div class="brand-name-group">
+            <span class="brand-name">Visionary<span class="brand-highlight">AI</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Centered Form Container -->
+      <div class="form-wrapper">
+        <div class="form-card">
+          
+          <!-- Header Area -->
+          <header class="form-header">
+            <h1 class="form-title">Welcome Back</h1>
+            <p class="form-subtitle">Please enter your details to access your dashboard.</p>
+          </header>
+
+          <!-- SSO Options (Google & Microsoft) -->
+          <section class="sso-section" aria-label="Single Sign-On Authentication">
+            <div class="sso-grid">
+              <!-- Google SSO -->
+              <button type="button" class="sso-button" id="btnSsoGoogle" aria-label="Continue with Google Workspace SSO">
+                <svg class="sso-icon" viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                </svg>
+                <span class="sso-text">Continue with Google</span>
+              </button>
+
+              <!-- Microsoft SSO -->
+              <button type="button" class="sso-button" id="btnSsoMicrosoft" aria-label="Continue with Microsoft Azure AD SSO">
+                <svg class="sso-icon" viewBox="0 0 23 23" width="20" height="20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path fill="#f35325" d="M1 1h10v10H1z"/>
+                  <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                  <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                  <path fill="#ffba08" d="M12 12h10v10H12z"/>
+                </svg>
+                <span class="sso-text">Continue with Microsoft</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Divider -->
+          <div class="divider-wrap" role="separator" aria-label="or sign in with enterprise credentials">
+            <div class="divider-line"></div>
+            <span class="divider-label">OR</span>
+            <div class="divider-line"></div>
+          </div>
+
+          <!-- Login Form -->
+          <form id="loginForm" class="auth-form" novalidate autocomplete="on">
+            
+            <!-- Email Field -->
+            <div class="form-group" id="emailGroup">
+              <div class="label-row">
+                <label for="workEmail" class="form-label">Work Email</label>
+                <span class="label-hint" id="domainHint">Enterprise domain</span>
+              </div>
+              <div class="input-container">
+                <span class="input-icon left" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  </svg>
+                </span>
+                <input 
+                  type="email" 
+                  id="workEmail" 
+                  name="email" 
+                  class="form-input" 
+                  placeholder="name@company.com" 
+                  autocomplete="username" 
+                  required 
+                  aria-required="true"
+                  aria-invalid="false"
+                  aria-describedby="emailFeedback"
+                />
+                <!-- Validation Status Icon -->
+                <div class="validation-status" id="emailStatusIcon" aria-hidden="true">
+                  <svg class="icon-valid" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                  </svg>
+                  <svg class="icon-invalid" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+              <div class="feedback-msg" id="emailFeedback" role="alert" aria-live="polite"></div>
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-group" id="passwordGroup">
+              <div class="label-row">
+                <label for="password" class="form-label">Password</label>
+                <!-- Caps Lock Warning Badge -->
+                <span class="caps-warning hidden" id="capsLockWarning" role="status">
+                  <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" aria-hidden="true">
+                    <path d="M8 1a.5.5 0 0 1 .5.5v5.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 7.293V1.5A.5.5 0 0 1 8 1zM2 13.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+                  </svg>
+                  Caps Lock is ON
+                </span>
+              </div>
+              <div class="input-container">
+                <span class="input-icon left" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </span>
+                <input 
+                  type="password" 
+                  id="password" 
+                  name="password" 
+                  class="form-input has-toggle" 
+                  placeholder="••••••••••••" 
+                  autocomplete="current-password" 
+                  required 
+                  aria-required="true"
+                  aria-invalid="false"
+                  aria-describedby="passwordFeedback"
+                />
+                <!-- Show / Hide Password Toggle Button -->
+                <button 
+                  type="button" 
+                  id="togglePassword" 
+                  class="password-toggle-btn" 
+                  aria-label="Show password" 
+                  aria-pressed="false"
+                  title="Toggle password visibility"
+                >
+                  <!-- Eye Open Icon -->
+                  <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <!-- Eye Closed Icon -->
+                  <svg class="eye-closed hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+                    <path d="m2 2 20 20"/>
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="feedback-msg" id="passwordFeedback" role="alert" aria-live="polite"></div>
+            </div>
+
+            <!-- Form Controls: Remember Me & Forgot Password -->
+            <div class="form-controls-row">
+              <label class="custom-checkbox-label" for="rememberMe">
+                <input type="checkbox" id="rememberMe" name="remember" class="custom-checkbox-input">
+                <span class="custom-checkbox-box" aria-hidden="true">
+                  <svg class="check-svg" viewBox="0 0 12 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1.5 5.5 4.5 8.5 10.5 1.5"></polyline>
+                  </svg>
+                </span>
+                <span class="checkbox-text">Remember me for 30 days</span>
+              </label>
+
+              <button type="button" class="forgot-password-link" id="btnForgotPassword">
+                Forgot password?
+              </button>
+            </div>
+
+            <!-- Primary Submit Action -->
+            <button type="submit" class="submit-btn" id="btnSubmit">
+              <span class="btn-text">Sign In to Platform</span>
+              <span class="btn-spinner hidden" aria-hidden="true">
+                <svg class="spinner-svg" viewBox="0 0 24 24" fill="none">
+                  <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/>
+                  <path class="spinner-head" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+              </span>
+            </button>
+
+          </form>
+
+          <!-- Footer / Admin Contact -->
+          <footer class="form-card-footer">
+            <p class="admin-notice">
+              Don't have an account? 
+              <button type="button" class="contact-admin-link" id="btnContactAdmin">
+                Contact your administrator
+              </button>
+            </p>
+            
+            <div class="legal-links">
+              <span class="security-badge">
+                <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M8 .999a.75.75 0 0 1 .55.24l5.25 5.5A.75.75 0 0 1 14 7.25V12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7.25a.75.75 0 0 1 .2-.51l5.25-5.5A.75.75 0 0 1 8 .999zm-.75 6.251a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 1.5 0v-3.5zm3 0a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 1.5 0v-3.5z"/>
+                </svg>
+                256-bit TLS Encrypted
+              </span>
+              <span class="sep">&bull;</span>
+              <a href="#privacy" class="subtle-link" id="linkPrivacy">Privacy Policy</a>
+              <span class="sep">&bull;</span>
+              <a href="#terms" class="subtle-link" id="linkTerms">Terms of Service</a>
+            </div>
+          </footer>
+
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Interactive Modal: Contact Administrator -->
+  <div class="modal-backdrop hidden" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="modal-title" id="adminModalTitle">Enterprise Account Access</h3>
+          <p class="modal-subtitle">VisionaryAI platform access is managed by your organization's IT / ML-Ops team.</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="info-alert">
+          <p>If your enterprise already has an active license, request an invitation from your workspace admin or send a provisioning ticket.</p>
+        </div>
+        <div class="admin-contact-details">
+          <div class="contact-row">
+            <span class="contact-label">Enterprise Support:</span>
+            <a href="mailto:support@visionary.ai" class="contact-val">support@visionary.ai</a>
+          </div>
+          <div class="contact-row">
+            <span class="contact-label">SSO Integration:</span>
+            <span class="contact-val">SAML 2.0 / OIDC enabled</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnCloseAdminModal">Close</button>
+        <button type="button" class="btn-primary-sm" id="btnCopyAdminEmail">
+          <span id="copyEmailText">Copy Support Email</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Modal: Forgot Password -->
+  <div class="modal-backdrop hidden" id="forgotModal" role="dialog" aria-modal="true" aria-labelledby="forgotModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon-badge warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="modal-title" id="forgotModalTitle">Reset Enterprise Password</h3>
+          <p class="modal-subtitle">Enter your work email address to receive password reset instructions.</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="resetEmail" class="form-label">Work Email</label>
+          <input type="email" id="resetEmail" class="form-input" placeholder="name@company.com">
+          <div class="feedback-msg" id="resetFeedback"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnCloseForgotModal">Cancel</button>
+        <button type="button" class="btn-primary-sm" id="btnSendReset">Send Reset Link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="assertive"></div>
+
+  <!-- Quick Demo Autofill Tooltip -->
+  <aside class="demo-badge-bar" aria-label="Demo Testing Helper">
+    <button type="button" class="demo-badge-btn" id="btnQuickDemo" title="Click to autofill enterprise demo credentials">
+      <span class="sparkle">⚡</span> Fill Demo Credentials
+    </button>
+  </aside>
+
+  <!-- Application Logic Scripts -->
+  <script src="js/canvas-ai.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
