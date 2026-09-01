@@ -30,7 +30,7 @@ if os.path.exists(sample_img_path):
     payload = {
         'image': b64_frame,
         'source': 'Live Camera',
-        'confidence_threshold': 0.70,
+        'confidence_threshold': 0.60,
         'iou_threshold': 0.45,
         'max_detections': 10,
         'min_detection_size': 20,
@@ -47,8 +47,9 @@ if os.path.exists(sample_img_path):
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             dets = data.get('detections', [])
+            detected_summary = [(d['class'], f"{int(float(d['confidence']) * 100)}%") for d in dets]
             print(f"   Status: {data.get('status')}")
-            print(f"   Detections >= 70%: {[(d['class'], f'{int(float(d[\"confidence\"])*100)}%') for d in dets]}")
+            print(f"   Detections >= 60%: {detected_summary}")
             print(f"   Saved to History IDs: {data.get('saved_detection_ids')}")
     except Exception as e:
         print(f"   Live detect API note: {e}")
@@ -86,7 +87,8 @@ if os.path.exists(sample_img_path):
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             dets = data.get('detections', [])
-            print(f"   Post-Import Live Detection Check: {[(d['class'], f'{int(float(d[\"confidence\"])*100)}%') for d in dets]}")
+            detected_summary = [(d['class'], f"{int(float(d['confidence']) * 100)}%") for d in dets]
+            print(f"   Post-Import Live Detection Check: {detected_summary}")
     except Exception as e:
         print(f"   Post-Import detection check note: {e}")
 

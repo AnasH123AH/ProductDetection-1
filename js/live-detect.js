@@ -5,7 +5,7 @@
  * 
  * Configured Professional Settings:
  * - Model: C:\yolo\best.pt (Trident, Donut, Pickers, Bahia)
- * - Minimum Hard Confidence Threshold: 0.70 (70%)
+ * - Minimum Hard Confidence Threshold: 0.60 (60%)
  * - IoU Threshold: 0.45
  * - Maximum Detections: 10
  * - Minimum Detection Size: 20 px
@@ -28,7 +28,7 @@ const LiveDetectModule = {
 
   // Live Settings (Synced with SettingsModule & LocalStorage / API)
   settings: {
-    confidence_threshold: 0.70,
+    confidence_threshold: 0.60,
     iou_threshold: 0.45,
     max_detections: 10,
     min_detection_size: 20,
@@ -103,15 +103,15 @@ const LiveDetectModule = {
       if (btnFullscreen) btnFullscreen.addEventListener('click', () => this.toggleFullscreen());
 
       if (confSlider) {
-        confSlider.value = "70";
-        confSlider.min = "70";
+        confSlider.value = "60";
+        confSlider.min = "60";
         confSlider.max = "95";
-        if (confValLabel) confValLabel.textContent = "70%";
-        this.settings.confidence_threshold = 0.70;
+        if (confValLabel) confValLabel.textContent = "60%";
+        this.settings.confidence_threshold = 0.60;
 
         confSlider.addEventListener('input', (e) => {
           const val = parseFloat(e.target.value);
-          this.settings.confidence_threshold = Math.max(0.70, val / 100);
+          this.settings.confidence_threshold = Math.max(0.60, val / 100);
           if (confValLabel) confValLabel.textContent = `${Math.round(this.settings.confidence_threshold * 100)}%`;
         });
       }
@@ -139,7 +139,7 @@ const LiveDetectModule = {
     if (!newSettings) return;
 
     if (newSettings.confidence_threshold) {
-      this.settings.confidence_threshold = Math.max(0.70, parseFloat(newSettings.confidence_threshold));
+      this.settings.confidence_threshold = Math.max(0.60, parseFloat(newSettings.confidence_threshold));
     }
     if (newSettings.iou_threshold) {
       this.settings.iou_threshold = parseFloat(newSettings.iou_threshold);
@@ -362,7 +362,7 @@ const LiveDetectModule = {
 
     const startTime = performance.now();
     try {
-      const effectiveConf = Math.max(0.70, this.settings.confidence_threshold);
+      const effectiveConf = Math.max(0.60, this.settings.confidence_threshold);
       const effectiveIou = this.settings.iou_threshold || 0.45;
       const effectiveMaxDet = this.settings.max_detections || 10;
       const effectiveMinSize = this.settings.min_detection_size || 20;
@@ -389,8 +389,8 @@ const LiveDetectModule = {
         const boxW = (x2 - x1) * offCanvas.width;
         const boxH = (y2 - y1) * offCanvas.height;
 
-        // Discard any detection strictly below 0.70 or smaller than min_detection_size
-        if (normConf >= 0.70 && normConf >= effectiveConf && boxW >= effectiveMinSize && boxH >= effectiveMinSize) {
+        // Discard any detection strictly below 0.60 or smaller than min_detection_size
+        if (normConf >= 0.60 && normConf >= effectiveConf && boxW >= effectiveMinSize && boxH >= effectiveMinSize) {
           det.confidence = normConf;
           rawValidDetections.push(det);
           seenClassesInCurrentFrame.add(det.class);
@@ -466,13 +466,13 @@ const LiveDetectModule = {
 
     const w = this.canvasEl.width;
     const h = this.canvasEl.height;
-    const effectiveConf = Math.max(0.70, this.settings.confidence_threshold);
+    const effectiveConf = Math.max(0.60, this.settings.confidence_threshold);
 
     this.currentDetections.forEach(det => {
       const conf = this.parseConfidence(det.confidence);
-      
-      // Strict filter: ignore anything < 0.70
-      if (conf < 0.70 || conf < effectiveConf) return;
+
+      // Strict filter: ignore anything < 0.60
+      if (conf < 0.60 || conf < effectiveConf) return;
 
       const [x1, y1, x2, y2] = det.bbox;
       const bx = x1 * w;
@@ -547,7 +547,7 @@ const LiveDetectModule = {
     let validTop = null;
     if (topDetection) {
       const conf = this.parseConfidence(topDetection.confidence);
-      if (conf >= 0.70 && conf >= this.settings.confidence_threshold) {
+      if (conf >= 0.60 && conf >= this.settings.confidence_threshold) {
         validTop = { ...topDetection, confidence: conf };
       }
     }
@@ -600,17 +600,17 @@ const LiveDetectModule = {
     Api.detectImage(
       dataUrl,
       'Camera Snapshot',
-      Math.max(0.70, this.settings.confidence_threshold),
+      Math.max(0.60, this.settings.confidence_threshold),
       this.settings.iou_threshold || 0.45,
       true,
       this.settings.save_detection_images === 'ON'
     ).then(res => {
-      const dets = (res.detections || []).filter(d => this.parseConfidence(d.confidence) >= 0.70);
+      const dets = (res.detections || []).filter(d => this.parseConfidence(d.confidence) >= 0.60);
       if (dets.length > 0) {
         const names = dets.map(d => `${d.class} (${Math.round(this.parseConfidence(d.confidence) * 100)}%)`).join(', ');
         alert(`Snapshot captured! Detected: ${names}. Saved to history.`);
       } else {
-        alert('Snapshot captured! No product detected with confidence ≥ 70%.');
+        alert('Snapshot captured! No product detected with confidence ≥ 60%.');
       }
     }).catch(err => {
       console.error('Snapshot failed', err);

@@ -137,7 +137,7 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
         if path == '/api/detect':
             image_data = payload.get('image')
             source = payload.get('source', 'Live Camera')
-            conf_thresh = max(0.70, float(payload.get('confidence_threshold', 0.70)))
+            conf_thresh = max(0.60, float(payload.get('confidence_threshold', 0.60)))
             iou_thresh = float(payload.get('iou_threshold', 0.45))
             max_det = int(payload.get('max_detections', 10))
             min_size = float(payload.get('min_detection_size', 20))
@@ -150,7 +150,7 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
 
             try:
                 result = detector.detect_image(image_data, conf_thresh, iou_thresh, max_det, min_size)
-                filtered_dets = [d for d in result.get("detections", []) if float(d.get("confidence", 0.0)) >= 0.70][:max_det]
+                filtered_dets = [d for d in result.get("detections", []) if float(d.get("confidence", 0.0)) >= 0.60][:max_det]
                 result["detections"] = filtered_dets
                 result["total_objects"] = len(filtered_dets)
 

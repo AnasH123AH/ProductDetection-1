@@ -5,7 +5,7 @@
 
 const SettingsModule = {
   activeSettings: {
-    confidence_threshold: "0.70",
+    confidence_threshold: "0.60",
     iou_threshold: "0.45",
     max_detections: "10",
     min_detection_size: "20",
@@ -53,7 +53,7 @@ const SettingsModule = {
         e.preventDefault();
         
         const updated = {
-          confidence_threshold: (Math.max(70, parseFloat(confSlider ? confSlider.value : 70)) / 100).toString(),
+          confidence_threshold: (Math.max(60, parseFloat(confSlider ? confSlider.value : 60)) / 100).toString(),
           iou_threshold: (parseFloat(iouSlider ? iouSlider.value : 45) / 100).toString(),
           max_detections: document.getElementById('settingMaxDetections')?.value || "10",
           min_detection_size: document.getElementById('settingMinDetectionSize')?.value || "20",
@@ -154,9 +154,9 @@ const SettingsModule = {
       }
     } catch (err) {}
 
-    // Enforce 0.70 minimum
-    if (parseFloat(this.activeSettings.confidence_threshold) < 0.70) {
-      this.activeSettings.confidence_threshold = "0.70";
+    // Enforce 0.60 minimum
+    if (parseFloat(this.activeSettings.confidence_threshold) < 0.60) {
+      this.activeSettings.confidence_threshold = "0.60";
     }
 
     // Populate UI elements
@@ -171,7 +171,7 @@ const SettingsModule = {
     const iouVal = document.getElementById('settingIouVal');
 
     if (confSlider) {
-      const pct = Math.max(70, Math.round(parseFloat(this.activeSettings.confidence_threshold) * 100));
+      const pct = Math.max(60, Math.round(parseFloat(this.activeSettings.confidence_threshold) * 100));
       confSlider.value = pct;
       if (confVal) confVal.textContent = `${pct}%`;
     }
