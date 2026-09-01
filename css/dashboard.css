@@ -111,6 +111,14 @@
   --z-tooltip: 3000;
 }
 
+/* Generic hidden-state utility. Several components (e.g. modal-backdrop,
+   video-placeholder) pair `.hidden` with their own display rule for extra
+   behavior; this fallback covers every other element using the bare class
+   (e.g. #cameraErrorBanner) that had no matching rule at all. */
+.hidden {
+  display: none;
+}
+
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
@@ -1893,6 +1901,121 @@
 .topbar .user-avatar:hover {
   box-shadow: 0 0 0 3px var(--light-surface-alt), 0 0 0 4px var(--brand-primary), 0 4px 12px rgba(2, 132, 199, 0.35);
   transform: translateY(-1px);
+}
+
+/* Staggered row / card entrance (JS sets animation-delay inline per item) */
+@keyframes rowEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.row-enter {
+  animation: rowEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Metric cards get a quick, subtle staggered entrance on first paint */
+.metric-card {
+  animation: rowEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.metrics-grid .metric-card:nth-child(1) { animation-delay: 0ms; }
+.metrics-grid .metric-card:nth-child(2) { animation-delay: 60ms; }
+.metrics-grid .metric-card:nth-child(3) { animation-delay: 120ms; }
+.metrics-grid .metric-card:nth-child(4) { animation-delay: 180ms; }
+
+/* Buttons & icons: quick, tactile hover response */
+.btn-ctrl {
+  transition: all var(--transition-fast), transform 120ms ease;
+}
+.btn-ctrl:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.nav-item-icon svg {
+  transition: transform var(--transition-fast);
+}
+
+/* --------------------------------------------------------------------------
+   9.6. Live Detection — AI Processing Chrome
+   -------------------------------------------------------------------------- */
+
+/* "AI ACTIVE" badge — only shown while the camera is running (not paused) */
+.ai-active-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 16;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--radius-full);
+  background: rgba(7, 9, 14, 0.72);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6EE7B7;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.video-feed-card.is-live .ai-active-badge {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ai-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.9);
+  animation: pulseDot 1.6s infinite ease-in-out;
+}
+
+/* Subtle scanning line, communicates "actively analyzing" without being distracting */
+.ai-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  top: 0;
+  z-index: 14;
+  background: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.9) 50%, transparent 100%);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.video-feed-card.is-live .ai-scanline {
+  opacity: 1;
+  animation: aiScan 2.6s linear infinite;
+}
+
+@keyframes aiScan {
+  0%   { top: 0%; opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Confirmation state when a product is actively recognized */
+.current-detected-box.is-detecting {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02), 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+@keyframes detectFlash {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.015); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02), 0 0 0 5px rgba(16, 185, 129, 0.22); }
+  100% { transform: scale(1); }
+}
+
+.current-detected-box.detect-flash {
+  animation: detectFlash 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Consistent, visible keyboard focus without harsh browser defaults */

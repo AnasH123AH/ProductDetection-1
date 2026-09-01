@@ -24,6 +24,7 @@ const LiveDetectModule = {
   stream: null,
   isRunning: false,
   isPaused: false,
+  wasDetecting: false,
 
   // Live Settings (Synced with SettingsModule & LocalStorage / API)
   settings: {
@@ -78,40 +79,50 @@ const LiveDetectModule = {
     if (!this.canvasEl || !this.videoEl) return;
     this.ctx = this.canvasEl.getContext('2d');
 
-    // Controls
-    const btnStart = document.getElementById('btnStartCamera');
-    const btnStop = document.getElementById('btnStopCamera');
-    const btnPause = document.getElementById('btnPauseCamera');
-    const btnSnapshot = document.getElementById('btnCaptureSnapshot');
-    const btnFullscreen = document.getElementById('btnFullscreenLive');
-    const confSlider = document.getElementById('liveConfSlider');
-    const confValLabel = document.getElementById('liveConfVal');
+    // This module's init() is called both on page load (js/live-detect.js's own
+    // DOMContentLoaded listener below) and every time the user navigates to the
+    // Live Detection tab (dashboard.js's switchView). Guard the one-time wiring
+    // so repeated visits don't stack duplicate click/resize listeners, which
+    // would otherwise fire startCamera()/stopCamera() multiple times per click.
+    if (!this._listenersBound) {
+      this._listenersBound = true;
 
-    if (btnStart) btnStart.addEventListener('click', () => this.startCamera());
-    if (btnStop) btnStop.addEventListener('click', () => this.stopCamera());
-    if (btnPause) btnPause.addEventListener('click', () => this.togglePause());
-    if (btnSnapshot) btnSnapshot.addEventListener('click', () => this.captureSnapshot());
-    if (btnFullscreen) btnFullscreen.addEventListener('click', () => this.toggleFullscreen());
+      // Controls
+      const btnStart = document.getElementById('btnStartCamera');
+      const btnStop = document.getElementById('btnStopCamera');
+      const btnPause = document.getElementById('btnPauseCamera');
+      const btnSnapshot = document.getElementById('btnCaptureSnapshot');
+      const btnFullscreen = document.getElementById('btnFullscreenLive');
+      const confSlider = document.getElementById('liveConfSlider');
+      const confValLabel = document.getElementById('liveConfVal');
 
-    if (confSlider) {
-      confSlider.value = "70";
-      confSlider.min = "70";
-      confSlider.max = "95";
-      if (confValLabel) confValLabel.textContent = "70%";
-      this.settings.confidence_threshold = 0.70;
+      if (btnStart) btnStart.addEventListener('click', () => this.startCamera());
+      if (btnStop) btnStop.addEventListener('click', () => this.stopCamera());
+      if (btnPause) btnPause.addEventListener('click', () => this.togglePause());
+      if (btnSnapshot) btnSnapshot.addEventListener('click', () => this.captureSnapshot());
+      if (btnFullscreen) btnFullscreen.addEventListener('click', () => this.toggleFullscreen());
 
-      confSlider.addEventListener('input', (e) => {
-        const val = parseFloat(e.target.value);
-        this.settings.confidence_threshold = Math.max(0.70, val / 100);
-        if (confValLabel) confValLabel.textContent = `${Math.round(this.settings.confidence_threshold * 100)}%`;
-      });
+      if (confSlider) {
+        confSlider.value = "70";
+        confSlider.min = "70";
+        confSlider.max = "95";
+        if (confValLabel) confValLabel.textContent = "70%";
+        this.settings.confidence_threshold = 0.70;
+
+        confSlider.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          this.settings.confidence_threshold = Math.max(0.70, val / 100);
+          if (confValLabel) confValLabel.textContent = `${Math.round(this.settings.confidence_threshold * 100)}%`;
+        });
+      }
+
+      // Window resize observer
+      window.addEventListener('resize', () => this.resizeCanvas());
     }
 
-    // Load initial settings
+    // Re-sync settings every time the view is entered (e.g. after editing them
+    // on the Settings page), even though listeners only attach once above.
     this.loadSavedSettings();
-
-    // Window resize observer
-    window.addEventListener('resize', () => this.resizeCanvas());
   },
 
   loadSavedSettings() {
@@ -298,6 +309,7 @@ const LiveDetectModule = {
     const btnStop = document.getElementById('btnStopCamera');
     const btnPause = document.getElementById('btnPauseCamera');
     const pauseText = document.getElementById('pauseBtnText');
+    const feedCard = document.getElementById('videoFeedCard');
 
     if (btnStart) btnStart.disabled = this.isRunning;
     if (btnStop) btnStop.disabled = !this.isRunning;
@@ -305,6 +317,7 @@ const LiveDetectModule = {
       btnPause.disabled = !this.isRunning;
       if (pauseText) pauseText.textContent = this.isPaused ? 'Resume' : 'Pause';
     }
+    if (feedCard) feedCard.classList.toggle('is-live', this.isRunning && !this.isPaused);
   },
 
   runDetectionLoop() {
@@ -529,6 +542,7 @@ const LiveDetectModule = {
     const latencyEl = document.getElementById('liveLatencyVal');
     const countEl = document.getElementById('liveObjectCount');
     const statusEl = document.getElementById('liveDetectionStatus');
+    const detectionBox = document.getElementById('currentDetectionBox');
 
     let validTop = null;
     if (topDetection) {
@@ -547,6 +561,17 @@ const LiveDetectModule = {
         statusEl.className = 'health-pill online';
         statusEl.innerHTML = '<span class="status-dot"></span> Detected';
       }
+      if (detectionBox) {
+        detectionBox.classList.add('is-detecting');
+        // Only replay the confirmation pulse on the rising edge (new detection),
+        // never every frame while a product stays in view.
+        if (!this.wasDetecting) {
+          detectionBox.classList.remove('detect-flash');
+          void detectionBox.offsetWidth; // restart the CSS animation
+          detectionBox.classList.add('detect-flash');
+        }
+      }
+      this.wasDetecting = true;
     } else {
       if (prodNameEl) prodNameEl.textContent = 'No product detected';
       if (confValEl) confValEl.textContent = '0%';
@@ -555,6 +580,8 @@ const LiveDetectModule = {
         statusEl.className = 'health-pill';
         statusEl.innerHTML = '<span class="status-dot"></span> Standby';
       }
+      if (detectionBox) detectionBox.classList.remove('is-detecting', 'detect-flash');
+      this.wasDetecting = false;
     }
 
     if (latencyEl) latencyEl.textContent = `${latencyMs || 0}ms`;

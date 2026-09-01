@@ -8,14 +8,37 @@ const ProductsModule = {
     const grid = document.getElementById('productsGrid');
     if (!grid) return;
 
+    grid.innerHTML = Array(4).fill(`
+      <div class="product-card">
+        <div class="loading-skeleton" style="height:200px;border-radius:0;"></div>
+        <div class="product-card-body">
+          <div class="loading-skeleton" style="height:14px;width:40%;"></div>
+          <div class="loading-skeleton" style="height:22px;width:70%;"></div>
+          <div class="loading-skeleton" style="height:60px;"></div>
+        </div>
+      </div>
+    `).join('');
+
     try {
       const products = await Api.getProducts();
 
-      grid.innerHTML = products.map(p => {
+      if (!products || products.length === 0) {
+        if (typeof renderEmptyState === 'function') {
+          renderEmptyState(grid, {
+            icon: 'inbox',
+            title: 'No products found',
+            message: 'The product catalogue will appear here once configured.'
+          });
+        }
+        return;
+      }
+
+      grid.innerHTML = products.map((p, i) => {
         const pClass = p.name.toLowerCase();
         return `
-          <div class="product-card">
+          <div class="product-card row-enter" style="animation-delay: ${i * 60}ms">
             <img src="${p.image}" alt="${p.name}" class="product-card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'%2394A3B8\\' stroke-width=\\'2\\'><rect width=\\'18\\' height=\\'18\\' x=\\'3\\' y=\\'3\\' rx=\\'2\\'/></svg>'">
+
             <div class="product-card-body">
               <div style="display: flex; align-items: center; justify-content: space-between;">
                 <span class="product-badge ${pClass}">${p.name}</span>
@@ -52,6 +75,13 @@ const ProductsModule = {
       }).join('');
     } catch (err) {
       console.error('Failed to load products catalogue:', err);
+      if (typeof renderEmptyState === 'function') {
+        renderEmptyState(grid, {
+          icon: 'inbox',
+          title: 'Unable to load products',
+          message: 'Check the backend connection and try again.'
+        });
+      }
     }
   }
 };

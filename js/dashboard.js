@@ -146,6 +146,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- Dashboard Data Loading ---
   async function loadDashboard() {
+    const recentTbody = document.getElementById('recentDetectionsTbody');
+    if (recentTbody && typeof renderSkeletonRows === 'function') {
+      renderSkeletonRows(recentTbody, 5, 4);
+    }
+
     try {
       const stats = await Api.getStats();
 
@@ -155,16 +160,39 @@ document.addEventListener('DOMContentLoaded', async () => {
       const mostDetEl = document.getElementById('dashMostDetected');
       const avgConfEl = document.getElementById('dashAvgConfidence');
 
-      if (totalDetEl) totalDetEl.textContent = stats.total_detections.toLocaleString();
-      if (todayDetEl) todayDetEl.textContent = stats.today_detections.toLocaleString();
+      if (totalDetEl && typeof animateCounter === 'function') {
+        animateCounter(totalDetEl, stats.total_detections);
+      } else if (totalDetEl) {
+        totalDetEl.textContent = stats.total_detections.toLocaleString();
+      }
+
+      if (todayDetEl && typeof animateCounter === 'function') {
+        animateCounter(todayDetEl, stats.today_detections);
+      } else if (todayDetEl) {
+        todayDetEl.textContent = stats.today_detections.toLocaleString();
+      }
+
       if (mostDetEl) mostDetEl.textContent = `${stats.most_detected.name} (${stats.most_detected.count})`;
-      if (avgConfEl) avgConfEl.textContent = `${stats.average_confidence}%`;
+
+      if (avgConfEl && typeof animateCounter === 'function') {
+        animateCounter(avgConfEl, stats.average_confidence, { format: (n) => `${Math.round(n)}%` });
+      } else if (avgConfEl) {
+        avgConfEl.textContent = `${stats.average_confidence}%`;
+      }
 
       // Render Charts
       renderProductDistributionChart(stats.distribution);
       renderRecentDetectionsTable(stats.recent_detections);
     } catch (e) {
       console.error('Failed to load dashboard data', e);
+      if (recentTbody && typeof renderEmptyState === 'function') {
+        recentTbody.innerHTML = `<tr><td colspan="5" style="padding: 0;"></td></tr>`;
+        renderEmptyState(recentTbody.querySelector('td'), {
+          icon: 'inbox',
+          title: 'Unable to load detections',
+          message: 'Check the backend connection and try again.'
+        });
+      }
     }
   }
 
@@ -172,9 +200,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const canvas = document.getElementById('chartDistribution');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    
-    // Clear
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (canvas._chartRaf) cancelAnimationFrame(canvas._chartRaf);
 
     const labels = ["Trident", "Donut", "Pickers", "Bahia"];
     const colors = ["#06B6D4", "#F59E0B", "#8B5CF6", "#10B981"];
@@ -187,46 +214,70 @@ document.addEventListener('DOMContentLoaded', async () => {
     const chartHeight = 180;
     const baseY = 210;
 
-    // Draw Grid lines
-    ctx.strokeStyle = "#E2E8F0";
-    ctx.lineWidth = 1;
-    ctx.font = "11px 'Plus Jakarta Sans', sans-serif";
-    ctx.fillStyle = "#94A3B8";
+    function draw(progress) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    for (let i = 0; i <= 4; i++) {
-      const y = baseY - (chartHeight / 4) * i;
-      const valLabel = Math.round((maxVal / 4) * i);
-      ctx.beginPath();
-      ctx.moveTo(startX - 10, y);
-      ctx.lineTo(startX + (barWidth + gap) * 4, y);
-      ctx.stroke();
-      ctx.fillText(valLabel, startX - 35, y + 4);
+      // Draw Grid lines
+      ctx.strokeStyle = "#E2E8F0";
+      ctx.lineWidth = 1;
+      ctx.font = "11px 'Plus Jakarta Sans', sans-serif";
+      ctx.fillStyle = "#94A3B8";
+
+      for (let i = 0; i <= 4; i++) {
+        const y = baseY - (chartHeight / 4) * i;
+        const valLabel = Math.round((maxVal / 4) * i);
+        ctx.beginPath();
+        ctx.moveTo(startX - 10, y);
+        ctx.lineTo(startX + (barWidth + gap) * 4, y);
+        ctx.stroke();
+        ctx.fillText(valLabel, startX - 35, y + 4);
+      }
+
+      // Draw Bars
+      labels.forEach((label, i) => {
+        const val = values[i];
+        const barH = (val / maxVal) * chartHeight * progress;
+        const x = startX + i * (barWidth + gap);
+        const y = baseY - barH;
+
+        // Rounded Bar
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.roundRect(x, y, barWidth, Math.max(barH, 0.001), [6, 6, 0, 0]);
+        ctx.fill();
+
+        // Value label on top (fades/rises in with the bar)
+        if (progress > 0.6) {
+          ctx.fillStyle = "#0F172A";
+          ctx.font = "bold 12px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "center";
+          ctx.globalAlpha = (progress - 0.6) / 0.4;
+          ctx.fillText(val, x + barWidth / 2, y - 8);
+          ctx.globalAlpha = 1;
+        }
+
+        // Product label on bottom
+        ctx.fillStyle = "#64748B";
+        ctx.font = "500 12px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText(label, x + barWidth / 2, baseY + 20);
+      });
     }
 
-    // Draw Bars
-    labels.forEach((label, i) => {
-      const val = values[i];
-      const barH = (val / maxVal) * chartHeight;
-      const x = startX + i * (barWidth + gap);
-      const y = baseY - barH;
+    const duration = 550;
+    const startTime = performance.now();
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
-      // Rounded Bar
-      ctx.fillStyle = colors[i];
-      ctx.beginPath();
-      ctx.roundRect(x, y, barWidth, barH, [6, 6, 0, 0]);
-      ctx.fill();
+    function frame(now) {
+      const progress = Math.min((now - startTime) / duration, 1);
+      draw(easeOutCubic(progress));
+      if (progress < 1) {
+        canvas._chartRaf = requestAnimationFrame(frame);
+      } else {
+        canvas._chartRaf = null;
+      }
+    }
 
-      // Value label on top
-      ctx.fillStyle = "#0F172A";
-      ctx.font = "bold 12px 'Plus Jakarta Sans', sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(val, x + barWidth / 2, y - 8);
-
-      // Product label on bottom
-      ctx.fillStyle = "#64748B";
-      ctx.font = "500 12px 'Plus Jakarta Sans', sans-serif";
-      ctx.fillText(label, x + barWidth / 2, baseY + 20);
-    });
+    canvas._chartRaf = requestAnimationFrame(frame);
   }
 
   function renderRecentDetectionsTable(recentList) {
@@ -234,11 +285,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!tbody) return;
 
     if (!recentList || recentList.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: #94A3B8;">No recent live detections. Start camera to begin ingestion.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="padding: 0;"></td></tr>`;
+      if (typeof renderEmptyState === 'function') {
+        renderEmptyState(tbody.querySelector('td'), {
+          icon: 'camera',
+          title: 'No recent detections',
+          message: 'Start the camera to begin live product ingestion.'
+        });
+      }
       return;
     }
 
-    tbody.innerHTML = recentList.map(item => {
+    tbody.innerHTML = recentList.map((item, i) => {
       const pClass = item.product_name.toLowerCase();
       const confPct = Math.round(item.confidence * 100);
       const dateObj = new Date(item.created_at || Date.now());
@@ -246,7 +304,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       return `
-        <tr data-det-id="${item.id}">
+        <tr data-det-id="${item.id}" class="row-enter" style="animation-delay: ${Math.min(i, 8) * 35}ms">
           <td><span class="product-badge ${pClass}">${item.product_name}</span></td>
           <td><span class="conf-pill" style="color: ${confPct >= 90 ? '#059669' : '#D97706'}">${confPct}%</span></td>
           <td>${dateStr}</td>
