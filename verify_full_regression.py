@@ -30,7 +30,7 @@ if os.path.exists(sample_img_path):
     payload = {
         'image': b64_frame,
         'source': 'Live Camera',
-        'confidence_threshold': 0.60,
+        'confidence_threshold': 0.70,
         'iou_threshold': 0.45,
         'max_detections': 10,
         'min_detection_size': 20,
@@ -49,7 +49,7 @@ if os.path.exists(sample_img_path):
             dets = data.get('detections', [])
             detected_summary = [(d['class'], f"{int(float(d['confidence']) * 100)}%") for d in dets]
             print(f"   Status: {data.get('status')}")
-            print(f"   Detections >= 60%: {detected_summary}")
+            print(f"   Detections >= 70%: {detected_summary}")
             print(f"   Saved to History IDs: {data.get('saved_detection_ids')}")
     except Exception as e:
         print(f"   Live detect API note: {e}")

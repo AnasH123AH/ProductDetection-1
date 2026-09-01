@@ -5,7 +5,7 @@ import os
 import io
 from PIL import Image
 
-def test_detect(image_input, name, conf=0.60):
+def test_detect(image_input, name, conf=0.70):
     if isinstance(image_input, str):
         with open(image_input, 'rb') as f:
             b64 = 'data:image/jpeg;base64,' + base64.b64encode(f.read()).decode('utf-8')
@@ -34,7 +34,7 @@ def test_detect(image_input, name, conf=0.60):
         print(f"[{name}] -> {res_str} | Latency: {data.get('inference_latency_ms')}ms")
 
 if __name__ == '__main__':
-    print("=== PRODUCT DETECTION TESTS (Threshold = 0.60) ===")
+    print("=== PRODUCT DETECTION TESTS (Threshold = 0.70) ===")
     for p in ['trident.jpeg', 'trident_sample2.jpeg', 'donut.jpeg', 'donut_sample2.jpeg', 'pickers.jpeg', 'pickers_sample2.jpeg', 'bahia.jpeg', 'bahia_sample2.jpeg']:
         fpath = os.path.join('assets', 'products', p)
         if os.path.exists(fpath):
