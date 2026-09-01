@@ -276,6 +276,7 @@ const LiveDetectModule = {
     this.isPaused = false;
     this.currentDetections = [];
     this.classFrameCounts = {};
+    this._backendOfflineNotified = false;
 
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -376,8 +377,18 @@ const LiveDetectModule = {
       );
       const latency = Math.round(performance.now() - startTime);
 
+      // Api.detectImage() swallows network/HTTP failures and returns
+      // { status: "offline" } with an empty detections array so the detection
+      // loop never throws. Left unchecked this is indistinguishable from
+      // "camera sees nothing" — surface it explicitly instead of staying silent.
+      if (result && result.status === 'offline') {
+        this.handleBackendOffline();
+        return;
+      }
+      this.clearBackendOfflineState();
+
       const rawDetections = (result && result.detections) ? result.detections : [];
-      
+
       // 1. HARD CONFIDENCE & MIN SIZE FILTERING
       const rawValidDetections = [];
       const seenClassesInCurrentFrame = new Set();
@@ -533,6 +544,33 @@ const LiveDetectModule = {
         this.ctx.fillText(label, bx + 7, Math.max(16, by - 9));
       }
     });
+  },
+
+  handleBackendOffline() {
+    const statusEl = document.getElementById('liveDetectionStatus');
+    const prodNameEl = document.getElementById('liveCurrentProduct');
+    if (statusEl) {
+      statusEl.className = 'health-pill offline';
+      statusEl.innerHTML = '<span class="status-dot"></span> Backend Offline';
+    }
+    if (prodNameEl) prodNameEl.textContent = 'Detection backend unreachable';
+
+    if (!this._backendOfflineNotified) {
+      this._backendOfflineNotified = true;
+      if (typeof showToast === 'function') {
+        showToast('Detection backend unreachable — start python backend/app.py to resume live detection.', 'danger', 6000);
+      }
+      console.error('[LiveDetect] /api/detect is unreachable. The camera is running but no frames are being analyzed. Make sure "python backend/app.py" is running.');
+    }
+  },
+
+  clearBackendOfflineState() {
+    if (this._backendOfflineNotified) {
+      this._backendOfflineNotified = false;
+      if (typeof showToast === 'function') {
+        showToast('Detection backend reconnected.', 'success', 3000);
+      }
+    }
   },
 
   updateTelemetry(topDetection, latencyMs, totalObjects) {
