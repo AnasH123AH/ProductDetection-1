@@ -124,7 +124,7 @@ const Api = {
     return await this.request('/detections/clear', { method: 'DELETE' });
   },
 
-  async detectImage(imageData, source = 'Live Camera', confThreshold = 0.60, iouThreshold = 0.45, saveToHistory = true, saveDetectionImages = false) {
+  async detectImage(imageData, source = 'Live Camera', confThreshold = 0.70, iouThreshold = 0.45, saveToHistory = true, saveDetectionImages = false) {
     try {
       return await this.request('/detect', {
         method: 'POST',

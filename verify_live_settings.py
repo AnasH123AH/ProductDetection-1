@@ -21,23 +21,23 @@ else:
     print(f"   ERROR: Model not found at {model_path}")
     exit(1)
 
-# 2a. Pure boundary logic test: confidence >= 0.60 (not > 0.60), matching the
+# 2a. Pure boundary logic test: confidence >= 0.70 (not > 0.70), matching the
 # exact comparison used in backend/detector.py (HARD_CONFIDENCE_THRESHOLD) and
 # js/live-detect.js (runDetectionLoop / renderBoundingBoxes / updateTelemetry).
-print("\n2a. Confidence Threshold Boundary Logic Tests (conf >= 0.60):")
+print("\n2a. Confidence Threshold Boundary Logic Tests (conf >= 0.70):")
 
-HARD_CONFIDENCE_THRESHOLD = 0.60
+HARD_CONFIDENCE_THRESHOLD = 0.70
 
 def passes_threshold(conf_pct):
     """Mirrors the real filter: `conf >= HARD_CONFIDENCE_THRESHOLD`."""
     return (conf_pct / 100.0) >= HARD_CONFIDENCE_THRESHOLD
 
 boundary_cases = [
-    (59.0, False),
-    (59.9, False),
-    (60.0, True),
-    (60.1, True),
+    (69.0, False),
+    (69.9, False),
     (70.0, True),
+    (70.1, True),
+    (85.0, True),
     (90.0, True),
 ]
 
@@ -64,9 +64,9 @@ def check_confidence_level(conf_input):
             boxes_over_threshold.append(f"{model.names[int(b.cls[0].item())]} ({int(c*100)}%)")
     return boxes_over_threshold
 
-print(f"   [Test 59% Threshold]   Rejection Check (conf=0.59)  -> Passed (Hard 0.60 minimum filter active)")
-print(f"   [Test 60% Threshold]   Acceptance Check (conf=0.60) -> {check_confidence_level(0.60)}")
+print(f"   [Test 69% Threshold]   Rejection Check (conf=0.69)  -> Passed (Hard 0.70 minimum filter active)")
 print(f"   [Test 70% Threshold]   Acceptance Check (conf=0.70) -> {check_confidence_level(0.70)}")
+print(f"   [Test 85% Threshold]   Acceptance Check (conf=0.85) -> {check_confidence_level(0.85)}")
 print(f"   [Test 90% Threshold]   Acceptance Check (conf=0.90) -> {check_confidence_level(0.90)}")
 
 # 3. Test API Endpoint with Save Images = OFF
@@ -77,7 +77,7 @@ with open(r"assets\products\trident.jpeg", 'rb') as f:
 payload = {
     'image': b64_img,
     'source': 'Live Camera',
-    'confidence_threshold': 0.60,
+    'confidence_threshold': 0.70,
     'iou_threshold': 0.45,
     'max_detections': 10,
     'min_detection_size': 20,
