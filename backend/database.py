@@ -52,7 +52,7 @@ def init_db():
 
     # Default live detection settings
     defaults = {
-        "confidence_threshold": "0.70",
+        "confidence_threshold": "0.60",
         "iou_threshold": "0.45",
         "max_detections": "10",
         "min_detection_size": "20",
@@ -419,7 +419,7 @@ def reseed_database():
 
     # Default live detection settings
     defaults = {
-        "confidence_threshold": "0.70",
+        "confidence_threshold": "0.60",
         "iou_threshold": "0.45",
         "max_detections": "10",
         "min_detection_size": "20",

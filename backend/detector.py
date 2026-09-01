@@ -9,7 +9,7 @@ Supports Ultralytics YOLO inference with custom trained weights for:
 Model: C:\\yolo\\best.pt
 Trained on: final_training_dataset (388 train / 97 val)
 Performance: Precision 98.87%, Recall 89.89%, mAP50 91.96%, mAP50-95 79.35%
-Confidence threshold: 0.70
+Confidence threshold: 0.60
 """
 
 import os
@@ -52,7 +52,7 @@ model_info = {
     "recall": 0.8989,
     "map50": 0.9196,
     "map50_95": 0.7935,
-    "default_confidence": 0.70,
+    "default_confidence": 0.60,
     "status": "Loaded"
 }
 
@@ -114,15 +114,15 @@ def load_image(image_input):
         
     raise ValueError("Unsupported image input format")
 
-HARD_CONFIDENCE_THRESHOLD = 0.70
+HARD_CONFIDENCE_THRESHOLD = 0.60
 
-def detect_image(image_input, conf_threshold=0.70, iou_threshold=0.45, max_detections=10, min_detection_size=20):
+def detect_image(image_input, conf_threshold=0.60, iou_threshold=0.45, max_detections=10, min_detection_size=20):
     """
     Runs actual Ultralytics YOLO inference on the given image.
-    Confidence threshold is strictly enforced (HARD 0.70 minimum).
-    If no product detected with conf >= 0.70, returns empty detections list [].
+    Confidence threshold is strictly enforced (HARD 0.60 minimum).
+    If no product detected with conf >= 0.60, returns empty detections list [].
     """
-    # Enforce hard 0.70 minimum
+    # Enforce hard 0.60 minimum
     effective_conf = max(HARD_CONFIDENCE_THRESHOLD, float(conf_threshold if conf_threshold is not None else HARD_CONFIDENCE_THRESHOLD))
     max_det = int(max_detections if max_detections is not None else 10)
     min_size = float(min_detection_size if min_detection_size is not None else 20)
@@ -143,7 +143,7 @@ def detect_image(image_input, conf_threshold=0.70, iou_threshold=0.45, max_detec
                     cls_id = int(box.cls[0].item())
                     conf = float(box.conf[0].item())
                     
-                    # Explicit filtering step 1: Discard immediately if below 0.70
+                    # Explicit filtering step 1: Discard immediately if below 0.60
                     if conf < HARD_CONFIDENCE_THRESHOLD or conf < effective_conf:
                         continue
                     
@@ -176,7 +176,7 @@ def detect_image(image_input, conf_threshold=0.70, iou_threshold=0.45, max_detec
     else:
         print("[Detector] Warning: yolo_model is None during detection.")
 
-    # Explicit filtering step 2: Safety post-filter ensuring nothing < 0.70 leaves backend & cap at max_det
+    # Explicit filtering step 2: Safety post-filter ensuring nothing < 0.60 leaves backend & cap at max_det
     detections = [d for d in detections if d.get("confidence", 0.0) >= HARD_CONFIDENCE_THRESHOLD][:max_det]
 
     latency = round((time.time() - start_time) * 1000, 1)
@@ -203,11 +203,11 @@ def run_benchmark(iterations=10):
         
     latencies = []
     # Warmup
-    detect_image(sample_img, 0.70)
+    detect_image(sample_img, 0.60)
     
     for _ in range(iterations):
         t0 = time.perf_counter()
-        detect_image(sample_img, 0.70)
+        detect_image(sample_img, 0.60)
         dt = (time.perf_counter() - t0) * 1000
         latencies.append(round(dt, 2))
         
