@@ -106,11 +106,37 @@ const Api = {
     }
   },
 
-  async getAnalytics() {
+  async getAnalytics(days, productFilter) {
+    // The backend's /api/analytics returns { by_product, over_time, by_hour } and
+    // does not currently support server-side day-range/product filtering - adapt
+    // its real shape into what AnalyticsModule reads (trends keyed by date,
+    // breakdown rows with min/max confidence as percentages).
+    const adapt = (raw) => {
+      if (!raw || raw.has_data === false) {
+        return { has_data: false, trends: {}, breakdown: [] };
+      }
+
+      const trends = {};
+      (raw.over_time || []).forEach(row => {
+        trends[row.date] = { total: row.count };
+      });
+
+      const breakdown = (raw.by_product || []).map(p => ({
+        product: p.product_name,
+        count: p.count,
+        avg_confidence: Math.round((p.avg_conf || 0) * 100),
+        min_confidence: Math.round((p.min_conf || 0) * 100),
+        max_confidence: Math.round((p.max_conf || 0) * 100)
+      }));
+
+      return { has_data: true, total: raw.total, trends, breakdown };
+    };
+
     try {
-      return await this.request('/analytics');
+      const raw = await this.request('/analytics');
+      return adapt(raw);
     } catch (e) {
-      return { has_data: false, message: "No detection data available yet" };
+      return adapt(null);
     }
   },
 
