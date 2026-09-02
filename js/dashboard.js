@@ -29,9 +29,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   const profileMenuEmail = document.getElementById('profileMenuEmail');
   const profileMenuLogout = document.getElementById('profileMenuLogout');
   const profileMenuAddAccount = document.getElementById('profileMenuAddAccount');
+  const profileOtherAccounts = document.getElementById('profileOtherAccounts');
 
   if (profileMenuName) profileMenuName.textContent = user.name;
   if (profileMenuEmail) profileMenuEmail.textContent = user.email;
+
+  function renderOtherAccounts() {
+    if (!profileOtherAccounts) return;
+    const others = Auth.getAccounts().filter(a => a.email !== user.email);
+    if (others.length === 0) {
+      profileOtherAccounts.classList.add('hidden');
+      profileOtherAccounts.innerHTML = '';
+      return;
+    }
+    profileOtherAccounts.classList.remove('hidden');
+    profileOtherAccounts.innerHTML = others.map(a => `
+      <button type="button" class="profile-dropdown-account" data-switch-email="${a.email}" role="menuitem">
+        <span class="profile-dropdown-account-avatar">${a.avatar || a.name.charAt(0)}</span>
+        <span class="profile-dropdown-account-info">
+          <span class="profile-dropdown-account-name">${a.name}</span>
+          <span class="profile-dropdown-account-email">${a.email}</span>
+        </span>
+      </button>
+    `).join('');
+
+    profileOtherAccounts.querySelectorAll('[data-switch-email]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        Auth.switchAccount(btn.getAttribute('data-switch-email'));
+        window.location.reload();
+      });
+    });
+  }
+
+  renderOtherAccounts();
 
   function closeProfileMenu() {
     if (!profileDropdown || profileDropdown.classList.contains('hidden')) return;
