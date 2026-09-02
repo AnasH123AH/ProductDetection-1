@@ -27,7 +27,6 @@ const HistoryModule = {
     const btnNext = document.getElementById('histBtnNext');
     const pageNumbers = document.getElementById('histPageNumbers');
     const btnExportAllCsv = document.getElementById('histBtnExportAllCsv');
-    const fileInputCsv = document.getElementById('histFileInputCsv');
     const btnCloseModal = document.getElementById('btnCloseDetModal');
     const modal = document.getElementById('detectionModal');
 
@@ -95,10 +94,6 @@ const HistoryModule = {
 
     if (btnExportAllCsv) {
       btnExportAllCsv.addEventListener('click', () => this.exportAllCsv());
-    }
-
-    if (fileInputCsv) {
-      fileInputCsv.addEventListener('change', (e) => this.importCsv(e));
     }
 
     if (btnCloseModal && modal) {
@@ -308,86 +303,6 @@ const HistoryModule = {
         alert('Failed to export detection history.');
       }
     }
-  },
-
-  async importCsv(event) {
-    const file = event.target.files ? event.target.files[0] : null;
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target.result;
-      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-
-      if (lines.length <= 1) {
-        if (typeof showToast === 'function') {
-          showToast('CSV file is empty or missing data rows.', 'warning');
-        } else {
-          alert('CSV file is empty or missing data rows.');
-        }
-        return;
-      }
-
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-      const itemsToImport = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-        if (cols.length < 2) continue;
-
-        let item = {};
-        headers.forEach((h, idx) => {
-          item[h] = cols[idx];
-        });
-
-        // Normalize item properties
-        const prod = item.Product || item['Product Name'] || item.product_name || cols[1] || 'Trident';
-        const conf = item.Confidence || item.confidence || '85%';
-        const source = item.Source || item.source || 'Imported CSV';
-        const date = item.Date || item.date || '';
-        const time = item.Time || item.time || '';
-
-        itemsToImport.push({
-          product_name: prod,
-          confidence: conf,
-          source: source,
-          Date: date,
-          Time: time
-        });
-      }
-
-      if (itemsToImport.length > 0) {
-        try {
-          const res = await Api.importDetectionsCsv(itemsToImport);
-          const count = res.imported || itemsToImport.length;
-          if (typeof showToast === 'function') {
-            showToast(`${count} detection records imported successfully.`, 'success');
-          } else {
-            alert(`Successfully imported ${count} detection records from CSV!`);
-          }
-          this.currentPage = 1;
-          this.loadHistory();
-        } catch (err) {
-          console.error('Import CSV failed:', err);
-          if (typeof showToast === 'function') {
-            showToast('Error importing CSV records into database.', 'danger');
-          } else {
-            alert('Error importing CSV records into database.');
-          }
-        }
-      } else {
-        if (typeof showToast === 'function') {
-          showToast('No valid records found in CSV file.', 'warning');
-        } else {
-          alert('No valid records found in CSV file.');
-        }
-      }
-
-      // Reset file input
-      event.target.value = '';
-    };
-
-    reader.readAsText(file);
   }
 };
 
