@@ -168,6 +168,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  const dashboardViewAllHistory = document.getElementById('dashboardViewAllHistory');
+  if (dashboardViewAllHistory) {
+    dashboardViewAllHistory.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchView('history');
+    });
+  }
+
   // Handle URL Hash on load
   const currentHash = window.location.hash.replace('#', '') || 'dashboard';
   switchView(currentHash);
