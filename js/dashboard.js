@@ -14,12 +14,65 @@ document.addEventListener('DOMContentLoaded', async () => {
   const userNameEl = document.getElementById('sidebarUserName');
   const userRoleEl = document.getElementById('sidebarUserRole');
   const userAvatarEl = document.getElementById('sidebarUserAvatar');
-  const topbarAvatarEl = document.getElementById('topbarUserAvatar');
+  const topbarAvatarInitialsEl = document.getElementById('topbarUserAvatarInitials');
 
   if (userNameEl) userNameEl.textContent = user.name;
   if (userRoleEl) userRoleEl.textContent = user.role;
   if (userAvatarEl) userAvatarEl.textContent = user.avatar || user.name.charAt(0);
-  if (topbarAvatarEl) topbarAvatarEl.textContent = user.avatar || user.name.charAt(0);
+  if (topbarAvatarInitialsEl) topbarAvatarInitialsEl.textContent = user.avatar || user.name.charAt(0);
+
+  // --- Topbar Profile Dropdown ---
+  const profileMenu = document.getElementById('profileMenu');
+  const profileTrigger = document.getElementById('topbarUserAvatar');
+  const profileDropdown = document.getElementById('profileDropdown');
+  const profileMenuName = document.getElementById('profileMenuName');
+  const profileMenuEmail = document.getElementById('profileMenuEmail');
+  const profileMenuLogout = document.getElementById('profileMenuLogout');
+
+  if (profileMenuName) profileMenuName.textContent = user.name;
+  if (profileMenuEmail) profileMenuEmail.textContent = user.email;
+
+  function closeProfileMenu() {
+    if (!profileDropdown || profileDropdown.classList.contains('hidden')) return;
+    profileDropdown.classList.add('hidden');
+    if (profileTrigger) profileTrigger.setAttribute('aria-expanded', 'false');
+  }
+
+  function openProfileMenu() {
+    if (!profileDropdown) return;
+    profileDropdown.classList.remove('hidden');
+    if (profileTrigger) profileTrigger.setAttribute('aria-expanded', 'true');
+  }
+
+  if (profileTrigger && profileDropdown) {
+    profileTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !profileDropdown.classList.contains('hidden');
+      if (isOpen) closeProfileMenu(); else openProfileMenu();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (profileMenu && !profileMenu.contains(e.target)) closeProfileMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeProfileMenu();
+    });
+
+    profileDropdown.querySelectorAll('.profile-dropdown-item[data-route]').forEach(item => {
+      item.addEventListener('click', () => {
+        const route = item.getAttribute('data-route');
+        closeProfileMenu();
+        switchView(route);
+      });
+    });
+  }
+
+  if (profileMenuLogout) {
+    profileMenuLogout.addEventListener('click', () => {
+      Auth.logout();
+    });
+  }
 
   // --- SPA Navigation ---
   const navItems = document.querySelectorAll('.nav-item');
@@ -104,9 +157,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const pillBackend = document.getElementById('pillBackend');
       const pillModel = document.getElementById('pillModel');
       const pillDb = document.getElementById('pillDb');
+      const isOnline = status.backend.toLowerCase().includes('online');
+
+      const profileStatusDot = document.getElementById('profileStatusDot');
+      if (profileStatusDot) {
+        profileStatusDot.classList.toggle('online', isOnline);
+        profileStatusDot.title = isOnline ? 'System online' : 'Backend unreachable';
+      }
 
       if (pillBackend) {
-        const isOnline = status.backend.toLowerCase().includes('online');
         pillBackend.className = `health-pill ${isOnline ? 'online' : 'warning'}`;
         pillBackend.innerHTML = `<span class="status-dot"></span> Backend: ${isOnline ? 'Online' : 'Standby'}`;
       }
