@@ -248,6 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     localStorage.setItem('visionary_user', JSON.stringify(authSession));
+    if (typeof Auth !== 'undefined') Auth.rememberAccount(authSession);
 
     // Simulate Enterprise Authentication & Ingestion Handshake
     setTimeout(() => {

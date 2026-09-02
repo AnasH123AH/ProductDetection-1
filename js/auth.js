@@ -39,6 +39,9 @@ const Auth = {
         token: 'jwt_admin_anas_' + Date.now()
       };
       localStorage.setItem('visionary_user', JSON.stringify(defaultUser));
+      this.rememberAccount(defaultUser);
+    } else {
+      this.rememberAccount(this.getUser());
     }
   },
 
@@ -52,6 +55,44 @@ const Auth = {
     user.name = name || user.name;
     user.email = email || user.email;
     localStorage.setItem('visionary_user', JSON.stringify(user));
+    this.rememberAccount(user);
     return user;
+  },
+
+  // --- Multi-account switcher (local browser only, no backend user store) ---
+
+  getAccounts() {
+    try {
+      const raw = localStorage.getItem('visionary_accounts');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  rememberAccount(user) {
+    if (!user || !user.email) return;
+    const accounts = this.getAccounts().filter(a => a.email !== user.email);
+    accounts.unshift({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      organization: user.organization,
+      avatar: user.avatar || user.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    });
+    localStorage.setItem('visionary_accounts', JSON.stringify(accounts));
+  },
+
+  switchAccount(email) {
+    const account = this.getAccounts().find(a => a.email === email);
+    if (!account) return null;
+    const session = {
+      ...account,
+      token: 'jwt_auth_' + Date.now(),
+      loggedInAt: new Date().toISOString()
+    };
+    localStorage.setItem('visionary_user', JSON.stringify(session));
+    return session;
   }
 };
