@@ -25,6 +25,7 @@ const HistoryModule = {
     const confLabel = document.getElementById('histConfVal');
     const btnPrev = document.getElementById('histBtnPrev');
     const btnNext = document.getElementById('histBtnNext');
+    const pageNumbers = document.getElementById('histPageNumbers');
     const btnExportAllCsv = document.getElementById('histBtnExportAllCsv');
     const fileInputCsv = document.getElementById('histFileInputCsv');
     const btnCloseModal = document.getElementById('btnCloseDetModal');
@@ -62,7 +63,7 @@ const HistoryModule = {
 
     if (btnPrev) {
       btnPrev.addEventListener('click', () => {
-        if (this.currentPage > 1) {
+        if (!this._isLoading && this.currentPage > 1) {
           this.currentPage--;
           this.loadHistory();
         }
@@ -71,8 +72,22 @@ const HistoryModule = {
 
     if (btnNext) {
       btnNext.addEventListener('click', () => {
-        if (this.currentPage * this.pageSize < this.totalItems) {
+        if (!this._isLoading && this.currentPage * this.pageSize < this.totalItems) {
           this.currentPage++;
+          this.loadHistory();
+        }
+      });
+    }
+
+    // Numbered page dots are re-rendered on every loadHistory() call, so wire
+    // one delegated listener on the container rather than per-button.
+    if (pageNumbers) {
+      pageNumbers.addEventListener('click', (e) => {
+        const btn = e.target.closest('.page-nav-btn');
+        if (!btn || btn.disabled || this._isLoading) return;
+        const targetPage = parseInt(btn.dataset.page, 10);
+        if (!isNaN(targetPage) && targetPage !== this.currentPage) {
+          this.currentPage = targetPage;
           this.loadHistory();
         }
       });
@@ -122,30 +137,41 @@ const HistoryModule = {
     const btnNext = document.getElementById('histBtnNext');
 
     if (!tbody) return;
+    if (this._isLoading) return;
+    this._isLoading = true;
 
     if (typeof renderSkeletonRows === 'function') {
       renderSkeletonRows(tbody, 6, this.pageSize > 8 ? 8 : this.pageSize);
     }
 
-    const offset = (this.currentPage - 1) * this.pageSize;
-    const params = {
-      limit: this.pageSize,
-      offset: offset,
-      ...this.currentFilters
-    };
-
     try {
-      const res = await Api.getDetections(params);
-      const items = res.items || [];
+      // Ask for one page first so we know the true total before deciding
+      // which page to actually fetch - if a deletion shrank the result set
+      // below the current page, clamp to the new last valid page instead of
+      // showing an out-of-range/empty page.
+      let offset = (this.currentPage - 1) * this.pageSize;
+      let params = { limit: this.pageSize, offset, ...this.currentFilters };
+      let res = await Api.getDetections(params);
+      let items = res.items || [];
       this.totalItems = res.total || items.length;
 
+      const totalPages = Math.max(1, Math.ceil(this.totalItems / this.pageSize));
+      if (this.currentPage > totalPages) {
+        this.currentPage = totalPages;
+        offset = (this.currentPage - 1) * this.pageSize;
+        params = { limit: this.pageSize, offset, ...this.currentFilters };
+        res = await Api.getDetections(params);
+        items = res.items || [];
+        this.totalItems = res.total || items.length;
+      }
+
       if (pageInfo) {
-        const totalPages = Math.ceil(this.totalItems / this.pageSize) || 1;
         pageInfo.textContent = `Page ${this.currentPage} of ${totalPages} (${this.totalItems} live detections)`;
       }
 
       if (btnPrev) btnPrev.disabled = this.currentPage <= 1;
       if (btnNext) btnNext.disabled = this.currentPage * this.pageSize >= this.totalItems;
+      this.renderPageNumbers(totalPages);
 
       if (items.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="padding: 0;"></td></tr>`;
@@ -188,7 +214,33 @@ const HistoryModule = {
           message: 'Check the backend connection and try again.'
         });
       }
+    } finally {
+      this._isLoading = false;
     }
+  },
+
+  /**
+   * Renders a small, clickable window of page-number dots (never all of
+   * them - e.g. 140 pages) centered on the current page, clamped to
+   * [1, totalPages].
+   */
+  renderPageNumbers(totalPages) {
+    const container = document.getElementById('histPageNumbers');
+    if (!container) return;
+
+    const windowSize = Math.min(5, totalPages);
+    let start = Math.max(1, this.currentPage - Math.floor(windowSize / 2));
+    let end = start + windowSize - 1;
+    if (end > totalPages) {
+      end = totalPages;
+      start = Math.max(1, end - windowSize + 1);
+    }
+
+    let html = '';
+    for (let p = start; p <= end; p++) {
+      html += `<button type="button" class="page-nav-btn${p === this.currentPage ? ' active' : ''}" data-page="${p}">${p}</button>`;
+    }
+    container.innerHTML = html;
   },
 
   async exportAllCsv() {

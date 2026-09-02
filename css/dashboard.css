@@ -1349,27 +1349,68 @@
 }
 
 .pagination-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--light-border);
   background: var(--light-surface-alt);
 }
 
-/* .btn-ctrl is styled for dark surfaces (near-white text on a faint white
-   tint) - on this page's light pagination bar that rendered as barely-visible
-   white-on-white text. Override colors only here, on light backgrounds; the
-   dark-surface usage elsewhere (e.g. Live Detection controls) is untouched. */
-.pagination-bar .btn-ctrl {
-  background: #FFFFFF;
-  border-color: var(--light-border-hover);
-  color: var(--text-title);
+.pagination-bar #histPageInfo {
+  grid-column: 1;
+  justify-self: start;
 }
 
-.pagination-bar .btn-ctrl:hover:not(:disabled) {
-  background: var(--light-surface-alt);
-  border-color: var(--light-border-hover);
+/* Center pill: dark capsule housing prev/next chevrons and page-number dots,
+   centered in the bar regardless of how long the page-info text is. */
+.page-nav-group {
+  grid-column: 2;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--dark-bg);
+}
+
+.page-nav-numbers {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.page-nav-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--dark-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.page-nav-btn:hover:not(:disabled):not(.active) {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--dark-text-primary);
+}
+
+.page-nav-btn.active {
+  background: var(--color-amber);
+  color: #1F1305;
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* --------------------------------------------------------------------------
