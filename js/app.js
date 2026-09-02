@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetFeedback.textContent = '';
   });
 
-  btnSendReset.addEventListener('click', () => {
+  btnSendReset.addEventListener('click', async () => {
     const val = resetEmailInput.value.trim();
     if (!val || !emailPattern.test(val)) {
       resetFeedback.textContent = 'Please enter a valid work email address.';
@@ -322,14 +322,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnSendReset.disabled = true;
     btnSendReset.textContent = 'Sending...';
+    resetFeedback.textContent = '';
 
-    setTimeout(() => {
+    try {
+      await Api.requestPasswordReset(val);
       btnSendReset.disabled = false;
       btnSendReset.textContent = 'Send Reset Link';
       closeModal(forgotModal);
-      showToast(`Password reset link dispatched to ${val}`, 'success', 4500);
+      showToast(`Password reset link sent to ${val}. Check your inbox.`, 'success', 4500);
       resetFeedback.textContent = '';
-    }, 1100);
+    } catch (err) {
+      btnSendReset.disabled = false;
+      btnSendReset.textContent = 'Send Reset Link';
+      resetFeedback.textContent = err.message || 'Failed to send reset email.';
+      resetFeedback.className = 'feedback-msg error-text';
+    }
   });
 
   // Close modals on clicking outside or Esc key

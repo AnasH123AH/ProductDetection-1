@@ -6,6 +6,8 @@ Provides endpoints for live inference, history, analytics, settings, and databas
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import os
+import re
+import secrets
 import sys
 import time
 import urllib.parse
@@ -16,12 +18,18 @@ sys.path.append(os.path.dirname(__file__))
 
 import database
 import detector
+import mailer
 
 PORT = 8000
 SERVER_START_TIME = datetime.now()
 
 # In-memory request log buffer (last 50 requests)
 REQUEST_LOGS = []
+
+# In-memory password reset tokens: token -> {"email": str, "expires_at": epoch}
+RESET_TOKENS = {}
+RESET_TOKEN_TTL_SECONDS = 30 * 60
+EMAIL_PATTERN = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 
 def log_request(method, path, status, latency_ms):
     log_entry = {
@@ -215,6 +223,36 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
                 database.update_setting(k, v)
             log_request("POST", path, 200, (time.perf_counter() - t0) * 1000)
             return self._send_json({"status": "updated", "settings": database.get_settings()})
+
+        # 4. Forgot Password Endpoint
+        elif path == '/api/auth/forgot-password':
+            email = str(payload.get('email', '')).strip()
+            if not email or not EMAIL_PATTERN.match(email):
+                log_request("POST", path, 400, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"error": "A valid email address is required."}, 400)
+
+            if not mailer.is_configured():
+                log_request("POST", path, 503, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"error": "Email sending is not configured on this server."}, 503)
+
+            now = time.time()
+            for tok in [t for t, v in RESET_TOKENS.items() if v["expires_at"] < now]:
+                del RESET_TOKENS[tok]
+
+            token = secrets.token_urlsafe(32)
+            RESET_TOKENS[token] = {"email": email, "expires_at": now + RESET_TOKEN_TTL_SECONDS}
+
+            host_header = self.headers.get('Host', 'localhost:5500')
+            reset_link = f"http://{host_header}/index.html?reset_token={token}"
+
+            try:
+                mailer.send_password_reset_email(email, reset_link)
+                log_request("POST", path, 200, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"status": "sent"})
+            except Exception as e:
+                del RESET_TOKENS[token]
+                log_request("POST", path, 502, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"error": f"Failed to send reset email: {str(e)}"}, 502)
 
         else:
             log_request("POST", path, 404, (time.perf_counter() - t0) * 1000)
