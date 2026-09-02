@@ -1357,6 +1357,21 @@
   background: var(--light-surface-alt);
 }
 
+/* .btn-ctrl is styled for dark surfaces (near-white text on a faint white
+   tint) - on this page's light pagination bar that rendered as barely-visible
+   white-on-white text. Override colors only here, on light backgrounds; the
+   dark-surface usage elsewhere (e.g. Live Detection controls) is untouched. */
+.pagination-bar .btn-ctrl {
+  background: #FFFFFF;
+  border-color: var(--light-border-hover);
+  color: var(--text-title);
+}
+
+.pagination-bar .btn-ctrl:hover:not(:disabled) {
+  background: var(--light-surface-alt);
+  border-color: var(--light-border-hover);
+}
+
 /* --------------------------------------------------------------------------
    9. Modals & Detail Overlays
    -------------------------------------------------------------------------- */
