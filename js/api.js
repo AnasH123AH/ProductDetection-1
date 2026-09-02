@@ -232,6 +232,38 @@ const Api = {
     }
   },
 
+  async requestPasswordReset(email) {
+    const endpoint = '/auth/forgot-password';
+    const body = JSON.stringify({ email });
+
+    const post = async (base) => {
+      const resp = await fetch(`${base}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const err = new Error(data.error || `Request failed (${resp.status})`);
+        err.status = resp.status;
+        throw err;
+      }
+      return data;
+    };
+
+    try {
+      return await post(this.activeUrl);
+    } catch (err) {
+      if (err.status === undefined && this.activeUrl === API_BASE) {
+        const data = await post(DIRECT_BACKEND);
+        this.activeUrl = DIRECT_BACKEND;
+        this.isBackendOnline = true;
+        return data;
+      }
+      throw err;
+    }
+  },
+
   async getProducts() {
     try {
       const stats = await this.getStats();
