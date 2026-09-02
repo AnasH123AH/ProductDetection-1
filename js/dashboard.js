@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const profileMenuName = document.getElementById('profileMenuName');
   const profileMenuEmail = document.getElementById('profileMenuEmail');
   const profileMenuLogout = document.getElementById('profileMenuLogout');
+  const profileMenuAddAccount = document.getElementById('profileMenuAddAccount');
 
   if (profileMenuName) profileMenuName.textContent = user.name;
   if (profileMenuEmail) profileMenuEmail.textContent = user.email;
@@ -58,19 +59,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeProfileMenu();
     });
-
-    profileDropdown.querySelectorAll('.profile-dropdown-item[data-route]').forEach(item => {
-      item.addEventListener('click', () => {
-        const route = item.getAttribute('data-route');
-        closeProfileMenu();
-        switchView(route);
-      });
-    });
   }
 
   if (profileMenuLogout) {
     profileMenuLogout.addEventListener('click', () => {
       Auth.logout();
+    });
+  }
+
+  if (profileMenuAddAccount) {
+    profileMenuAddAccount.addEventListener('click', () => {
+      // Sends the user to the sign-in page to authenticate a different identity,
+      // replacing the current session (this app has no multi-account backend).
+      window.location.href = 'index.html';
     });
   }
 
