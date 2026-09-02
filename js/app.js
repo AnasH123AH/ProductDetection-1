@@ -18,10 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const togglePasswordBtn = document.getElementById('togglePassword');
   const capsLockWarning = document.getElementById('capsLockWarning');
   const submitBtn = document.getElementById('btnSubmit');
-  
-  // SSO Buttons
-  const btnSsoGoogle = document.getElementById('btnSsoGoogle');
-  const btnSsoMicrosoft = document.getElementById('btnSsoMicrosoft');
 
   // Modals
   const adminModal = document.getElementById('adminModal');
@@ -261,41 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         window.location.href = 'app.html';
       }, 1000);
-    }, 900);
-  });
-
-  // --- Single Sign-On (SSO) Simulation ---
-  btnSsoGoogle.addEventListener('click', () => {
-    btnSsoGoogle.style.opacity = '0.7';
-    btnSsoGoogle.disabled = true;
-    showToast('Redirecting to Google Workspace SSO...', 'info');
-
-    setTimeout(() => {
-      btnSsoGoogle.style.opacity = '1';
-      btnSsoGoogle.disabled = false;
-      emailInput.value = 'anas.hamma@e-polytechnique.ma';
-      passwordInput.value = 'Anas2004';
-      validateEmail(false);
-      validatePassword(false);
-      showToast('Google SSO Verified: anas.hamma@e-polytechnique.ma', 'success');
-      submitBtn.focus();
-    }, 900);
-  });
-
-  btnSsoMicrosoft.addEventListener('click', () => {
-    btnSsoMicrosoft.style.opacity = '0.7';
-    btnSsoMicrosoft.disabled = true;
-    showToast('Connecting to Microsoft Azure Active Directory (OIDC)...', 'info');
-
-    setTimeout(() => {
-      btnSsoMicrosoft.style.opacity = '1';
-      btnSsoMicrosoft.disabled = false;
-      emailInput.value = 'anas.hamma@e-polytechnique.ma';
-      passwordInput.value = 'Anas2004';
-      validateEmail(false);
-      validatePassword(false);
-      showToast('Microsoft SSO Authorized: anas.hamma@e-polytechnique.ma', 'success');
-      submitBtn.focus();
     }, 900);
   });
 
