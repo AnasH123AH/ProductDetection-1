@@ -1081,6 +1081,22 @@
   text-align: right;
 }
 
+/* The base .btn-ctrl is themed for dark surfaces (near-white text on a
+   near-transparent white fill), so on this light card both the button and its
+   "Update" label rendered white-on-white. Re-theme it for the light surface,
+   matching the app's existing primary button treatment. */
+.inventory-manage-row .btn-ctrl {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: #FFFFFF;
+  cursor: pointer;
+}
+
+.inventory-manage-row .btn-ctrl:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
+}
+
 /* --------------------------------------------------------------------------
    5. Tables & Data Lists
    -------------------------------------------------------------------------- */
