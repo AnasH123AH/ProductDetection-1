@@ -406,6 +406,7 @@
                   <div class="confidence-bar-wrap">
                     <div class="confidence-bar-fill" id="liveConfidenceBar" style="width: 0%;"></div>
                   </div>
+                  <div class="detected-tracking-id hidden" id="liveTrackingId"></div>
                 </div>
               </div>
 
@@ -682,6 +683,27 @@
                         <option value="1">1 frame</option>
                         <option value="5">5 consecutive frames</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                    <div>
+                      <label class="form-label">Object Tracking</label>
+                      <select class="filter-select" id="settingObjectTracking" style="width: 100%; margin-top: 0.35rem;">
+                        <option value="ON">ON</option>
+                        <option value="OFF">OFF</option>
+                      </select>
+                      <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">One physical product = one history record on exit, instead of one per frame.</p>
+                    </div>
+
+                    <div>
+                      <label class="form-label">Max Missed Frames</label>
+                      <select class="filter-select" id="settingMaxMissedFrames" style="width: 100%; margin-top: 0.35rem;">
+                        <option value="5">5 frames (~1.2s)</option>
+                        <option value="3">3 frames (~0.7s)</option>
+                        <option value="10">10 frames (~2.4s)</option>
+                      </select>
+                      <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">How long a product can briefly vanish before it's considered gone.</p>
                     </div>
                   </div>
 

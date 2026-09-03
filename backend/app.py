@@ -20,6 +20,7 @@ import ai_assistant
 import database
 import detector
 import mailer
+import tracking
 
 PORT = 8000
 SERVER_START_TIME = datetime.now()
@@ -152,10 +153,47 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
             min_size = float(payload.get('min_detection_size', 20))
             save_to_history = payload.get('save_to_history', True)
             save_detection_images = payload.get('save_detection_images', False)
+            # `track`: only the live-camera loop sets this — a deliberate,
+            # continuous stream of frames from ONE physical camera. Snapshots,
+            # CSV import, etc. never set it, and keep the exact legacy
+            # immediate-save-per-frame behavior below unchanged.
+            use_tracking = bool(payload.get('track', False)) and str(payload.get('object_tracking_enabled', 'ON')).upper() != 'OFF'
 
             if not image_data:
                 log_request("POST", path, 400, (time.perf_counter() - t0) * 1000)
                 return self._send_json({"error": "No image payload provided"}, 400)
+
+            if use_tracking:
+                required_stable_frames = int(payload.get('required_stable_frames', 3)) if str(payload.get('detection_stability', 'ON')).upper() != 'OFF' else 1
+                max_missed_frames = int(payload.get('max_missed_frames', 5))
+                duplicate_cooldown = float(payload.get('detection_cooldown', 1.0)) if str(payload.get('duplicate_prevention', 'ON')).upper() != 'OFF' else 0.0
+
+                try:
+                    result = detector.detect_and_track(image_data, conf_thresh, iou_thresh, max_det, min_size)
+                    filtered_dets = [d for d in result.get("detections", []) if float(d.get("confidence", 0.0)) >= 0.70][:max_det]
+
+                    active_tracks, exited_tracks = ([], [])
+                    if save_to_history:
+                        active_tracks, exited_tracks = tracking.process_frame(
+                            filtered_dets,
+                            required_stable_frames=required_stable_frames,
+                            max_missed_frames=max_missed_frames,
+                            duplicate_cooldown_seconds=duplicate_cooldown,
+                            source=source,
+                            model_name=result.get("model", "Ultralytics-YOLOv8-FinalDetector"),
+                            save_detection_images=save_detection_images,
+                        )
+
+                    result["detections"] = filtered_dets
+                    result["total_objects"] = len(filtered_dets)
+                    result["active_tracks"] = active_tracks
+                    result["exited"] = exited_tracks
+                    result["saved_detection_ids"] = [e["detection_id"] for e in exited_tracks]
+                    log_request("POST", path, 200, (time.perf_counter() - t0) * 1000)
+                    return self._send_json(result)
+                except Exception as e:
+                    log_request("POST", path, 500, (time.perf_counter() - t0) * 1000)
+                    return self._send_json({"error": f"Inference failed: {str(e)}"}, 500)
 
             try:
                 result = detector.detect_image(image_data, conf_thresh, iou_thresh, max_det, min_size)
@@ -177,7 +215,7 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
                             model_name=result.get("model", "Ultralytics-YOLOv8-FinalDetector")
                         )
                         saved_ids.append(det_id)
-                
+
                 result["saved_detection_ids"] = saved_ids
                 log_request("POST", path, 200, (time.perf_counter() - t0) * 1000)
                 return self._send_json(result)
@@ -289,6 +327,14 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
                     "success": False,
                     "error": "The local AI assistant is temporarily unavailable. Please try again."
                 }, 502)
+
+        # 6. Reset Object Tracking (called when a live camera session starts/stops,
+        # so a new session never inherits stale track IDs from a previous one)
+        elif path == '/api/tracking/reset':
+            tracking.reset()
+            detector.reset_tracker()
+            log_request("POST", path, 200, (time.perf_counter() - t0) * 1000)
+            return self._send_json({"status": "reset"})
 
         else:
             log_request("POST", path, 404, (time.perf_counter() - t0) * 1000)

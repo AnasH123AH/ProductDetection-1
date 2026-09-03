@@ -1314,6 +1314,17 @@
   transition: width 0.25s ease-out;
 }
 
+.detected-tracking-id {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  margin-top: var(--space-2);
+}
+
+.detected-tracking-id.hidden {
+  display: none;
+}
+
 /* Control Buttons Group */
 .control-buttons-group {
   display: flex;

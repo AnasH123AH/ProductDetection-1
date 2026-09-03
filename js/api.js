@@ -174,7 +174,7 @@ const Api = {
     return await this.request('/detections/clear', { method: 'DELETE' });
   },
 
-  async detectImage(imageData, source = 'Live Camera', confThreshold = 0.70, iouThreshold = 0.45, saveToHistory = true, saveDetectionImages = false) {
+  async detectImage(imageData, source = 'Live Camera', confThreshold = 0.70, iouThreshold = 0.45, saveToHistory = true, saveDetectionImages = false, trackingOptions = {}) {
     try {
       return await this.request('/detect', {
         method: 'POST',
@@ -184,7 +184,8 @@ const Api = {
           confidence_threshold: confThreshold,
           iou_threshold: iouThreshold,
           save_to_history: saveToHistory,
-          save_detection_images: saveDetectionImages
+          save_detection_images: saveDetectionImages,
+          ...trackingOptions
         })
       });
     } catch (e) {
@@ -198,6 +199,14 @@ const Api = {
         };
       }
       return { detections: [], total_objects: 0 };
+    }
+  },
+
+  async resetTracking() {
+    try {
+      return await this.request('/tracking/reset', { method: 'POST', body: '{}' });
+    } catch (e) {
+      return { status: 'error' };
     }
   },
 
