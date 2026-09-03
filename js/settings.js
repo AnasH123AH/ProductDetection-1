@@ -120,6 +120,65 @@ const SettingsModule = {
 
     this.populateCameraDevices();
     this.loadSettings();
+    this.loadInventory();
+  },
+
+  async loadInventory() {
+    const list = document.getElementById('inventoryManageList');
+    if (!list) return;
+
+    try {
+      const items = await Api.getInventory();
+      if (!items || items.length === 0) {
+        list.innerHTML = `<div style="text-align: center; padding: var(--space-6); color: var(--text-muted);">No inventory data available.</div>`;
+        return;
+      }
+
+      list.innerHTML = items.map(item => `
+        <div class="inventory-manage-row" data-product="${item.product_name}">
+          <span class="inventory-manage-label">${item.product_name} <span style="color: var(--text-subtle); font-weight: 400;">(currently ${item.stock_quantity})</span></span>
+          <input type="number" class="inventory-manage-input" min="0" step="1" value="${item.stock_quantity}" aria-label="Set stock for ${item.product_name}">
+          <button type="button" class="btn-ctrl">Update</button>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('.inventory-manage-row').forEach(row => {
+        const product = row.getAttribute('data-product');
+        const input = row.querySelector('.inventory-manage-input');
+        const btn = row.querySelector('button');
+
+        btn.addEventListener('click', async () => {
+          const value = parseInt(input.value, 10);
+          if (isNaN(value) || value < 0 || String(value) !== input.value.trim()) {
+            if (typeof showToast === 'function') showToast('Stock must be a non-negative whole number.', 'danger');
+            return;
+          }
+
+          btn.disabled = true;
+          const originalText = btn.textContent;
+          btn.textContent = 'Saving…';
+
+          try {
+            await Api.updateInventory(product, value);
+            if (typeof showToast === 'function') {
+              showToast(`${product} stock set to ${value}.`, 'success');
+            }
+            const label = row.querySelector('.inventory-manage-label');
+            if (label) label.innerHTML = `${product} <span style="color: var(--text-subtle); font-weight: 400;">(currently ${value})</span>`;
+            if (window.updateInventoryDisplay) window.updateInventoryDisplay();
+          } catch (err) {
+            if (typeof showToast === 'function') {
+              showToast(err.message || 'Failed to update inventory.', 'danger');
+            }
+          } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+          }
+        });
+      });
+    } catch (e) {
+      list.innerHTML = `<div style="text-align: center; padding: var(--space-6); color: var(--color-rose);">Unable to load inventory. Check the backend connection.</div>`;
+    }
   },
 
   async populateCameraDevices() {

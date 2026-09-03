@@ -242,6 +242,63 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateSystemHealth();
   setInterval(updateSystemHealth, 5000);
 
+  // --- Inventory Display (reflects the real database; stock only ever
+  // changes server-side, on a confirmed Live Detection EXIT EVENT or an
+  // explicit admin update on the Settings page — this just polls and renders) ---
+
+  // Percent-remaining breakpoints for the stock status badge/bar. Named and
+  // centralized here so they're easy to tune without hunting through markup.
+  const INVENTORY_STATUS_THRESHOLDS = { healthy: 60, medium: 25, low: 1 };
+
+  function getStockStatus(current, initial) {
+    if (current <= 0) return { key: 'out', label: 'Out of Stock' };
+    const pct = initial > 0 ? (current / initial) * 100 : 0;
+    if (pct >= INVENTORY_STATUS_THRESHOLDS.healthy) return { key: 'healthy', label: 'Healthy' };
+    if (pct >= INVENTORY_STATUS_THRESHOLDS.medium) return { key: 'medium', label: 'Medium' };
+    return { key: 'low', label: 'Low' };
+  }
+
+  async function updateInventoryDisplay() {
+    const grid = document.getElementById('inventoryGrid');
+    if (!grid) return;
+
+    try {
+      const items = await Api.getInventory();
+      if (!items || items.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: var(--space-8); color: var(--text-muted);">No inventory data available.</div>`;
+        return;
+      }
+
+      const total = items.reduce((sum, i) => sum + i.stock_quantity, 0);
+      const totalEl = document.getElementById('inventoryTotalStock');
+      if (totalEl) totalEl.textContent = `Total: ${total.toLocaleString()} units`;
+
+      grid.innerHTML = items.map(item => {
+        const pct = item.initial_stock > 0 ? Math.round((item.stock_quantity / item.initial_stock) * 100) : 0;
+        const status = getStockStatus(item.stock_quantity, item.initial_stock);
+        return `
+          <div class="inventory-item">
+            <div class="inventory-item-header">
+              <span class="inventory-item-name">${item.product_name}</span>
+              <span class="inventory-status-badge ${status.key}">${status.label}</span>
+            </div>
+            <div class="inventory-item-stock">${item.stock_quantity} <span class="inventory-item-initial">/ ${item.initial_stock}</span></div>
+            <div class="inventory-bar-wrap">
+              <div class="inventory-bar-fill ${status.key}" style="width: ${Math.max(0, Math.min(100, pct))}%;"></div>
+            </div>
+            <div class="inventory-item-pct">${pct}% remaining</div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      console.warn('Inventory poll failed', e);
+    }
+  }
+
+  window.updateInventoryDisplay = updateInventoryDisplay; // lets settings.js request an immediate refresh after an admin update, instead of waiting for the next poll
+  updateInventoryDisplay();
+  setInterval(updateInventoryDisplay, 5000);
+
   // --- Dashboard Data Loading ---
   async function loadDashboard() {
     const recentTbody = document.getElementById('recentDetectionsTbody');

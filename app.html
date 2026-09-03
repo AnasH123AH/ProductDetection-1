@@ -298,6 +298,29 @@
             </div>
           </div>
 
+          <!-- Inventory Overview -->
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="color:var(--color-emerald);">
+                  <path d="M20.5 7.28a1 1 0 0 0-.5-.87l-8-4.5a1 1 0 0 0-1 0l-8 4.5a1 1 0 0 0-.5.87v9.44a1 1 0 0 0 .5.87l8 4.5a1 1 0 0 0 1 0l8-4.5a1 1 0 0 0 .5-.87z"/>
+                  <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
+                  <polyline points="7.5 19.79 7.5 14.6 3 12"/>
+                  <polyline points="21 12 16.5 14.6 16.5 19.79"/>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                  <line x1="12" y1="22.08" x2="12" y2="12"/>
+                </svg>
+                Inventory
+              </h3>
+              <span class="metric-subtext" id="inventoryTotalStock">Total: -- units</span>
+            </div>
+            <div class="card-body">
+              <div class="inventory-grid" id="inventoryGrid">
+                <div style="grid-column: 1 / -1; text-align: center; padding: var(--space-8); color: var(--text-muted);">Loading inventory...</div>
+              </div>
+            </div>
+          </div>
+
           <!-- Recent Detections Live Table -->
           <div class="card">
             <div class="card-header">
@@ -878,6 +901,21 @@
               </button>
             </div>
           </form>
+
+          <!-- Inventory Management -->
+          <div class="card" style="margin-top: var(--space-5);">
+            <div class="card-header">
+              <h3 class="card-title">Inventory Management</h3>
+            </div>
+            <div class="card-body">
+              <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-3);">
+                Sets a product's stock to a fresh baseline (both current and initial stock). This is the only way stock changes outside of a confirmed Live Detection exit event.
+              </p>
+              <div id="inventoryManageList">
+                <div style="text-align: center; padding: var(--space-6); color: var(--text-muted);">Loading inventory…</div>
+              </div>
+            </div>
+          </div>
 
         </section>
 
