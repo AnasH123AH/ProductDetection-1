@@ -1,8 +1,9 @@
 /**
  * VisionaryAI Help Assistant
  * Real AI assistant: every question is sent to the backend's POST /api/chat,
- * which calls OpenAI grounded in live VisionaryAI application data
- * (settings, recent detections, dashboard stats). No hardcoded/local answers.
+ * which calls a local Ollama model grounded in live VisionaryAI application
+ * data (settings, recent detections, dashboard stats). No hardcoded/local
+ * answers, no cloud API.
  */
 
 'use strict';
@@ -95,7 +96,7 @@ const ChatbotModule = (() => {
   function greetIfNeeded() {
     if (hasGreeted) return;
     hasGreeted = true;
-    appendMessage(`Hi! I'm the VisionaryAI Assistant, powered by AI. Ask me anything about how this app works, or tap a suggestion below.`, 'bot');
+    appendMessage(`Hi! I'm the VisionaryAI Assistant, powered by a local AI model running on this machine. Ask me anything about how this app works, or tap a suggestion below.`, 'bot');
     renderQuickReplies();
   }
 

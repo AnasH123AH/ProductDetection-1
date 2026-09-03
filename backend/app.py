@@ -3,7 +3,7 @@ VisionaryAI - Product Detection REST API Server
 Provides endpoints for live inference, history, analytics, settings, and database management.
 """
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import json
 import os
 import re
@@ -262,12 +262,10 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
             user_info = payload.get('user')
             user_display_name = user_info.get('name') if isinstance(user_info, dict) else None
 
-            if not ai_assistant.is_configured():
+            ollama_ok, ollama_status_msg = ai_assistant.check_ollama_status()
+            if not ollama_ok:
                 log_request("POST", path, 503, (time.perf_counter() - t0) * 1000)
-                return self._send_json({
-                    "success": False,
-                    "error": "The AI assistant is not configured on this server (missing OPENAI_API_KEY)."
-                }, 503)
+                return self._send_json({"success": False, "error": ollama_status_msg}, 503)
 
             try:
                 reply = ai_assistant.call_chat(
@@ -280,12 +278,16 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
             except ValueError as e:
                 log_request("POST", path, 400, (time.perf_counter() - t0) * 1000)
                 return self._send_json({"success": False, "error": str(e)}, 400)
+            except RuntimeError as e:
+                print(f"[AI Chat Error] {e}")
+                log_request("POST", path, 502, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": str(e)}, 502)
             except Exception as e:
                 print(f"[AI Chat Error] {type(e).__name__}: {e}")
                 log_request("POST", path, 502, (time.perf_counter() - t0) * 1000)
                 return self._send_json({
                     "success": False,
-                    "error": "The AI assistant is temporarily unavailable. Please try again."
+                    "error": "The local AI assistant is temporarily unavailable. Please try again."
                 }, 502)
 
         else:
@@ -313,7 +315,7 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
 def run_server():
     database.init_db()
     server_address = ('', PORT)
-    httpd = HTTPServer(server_address, VisionaryAPIHandler)
+    httpd = ThreadingHTTPServer(server_address, VisionaryAPIHandler)
     print(f"==================================================================")
     print(f" VisionaryAI REST API Server")
     print(f" Listening on http://127.0.0.1:{PORT}")
