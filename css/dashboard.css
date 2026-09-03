@@ -956,6 +956,131 @@
   color: var(--color-emerald);
 }
 
+/* Inventory */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.inventory-item {
+  border: 1px solid var(--light-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background: var(--light-surface-alt);
+}
+
+.inventory-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.inventory-item-name {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--text-title);
+}
+
+.inventory-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.inventory-status-badge.healthy {
+  background: var(--color-emerald-light);
+  color: var(--color-emerald-dark);
+}
+
+.inventory-status-badge.medium {
+  background: var(--color-amber-light);
+  color: var(--color-amber-dark);
+}
+
+.inventory-status-badge.low {
+  background: var(--color-rose-light);
+  color: var(--color-rose-dark);
+}
+
+.inventory-status-badge.out {
+  background: #E2E8F0;
+  color: var(--text-muted);
+}
+
+.inventory-item-stock {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-title);
+  font-family: var(--font-mono);
+  line-height: 1;
+  margin-bottom: var(--space-1);
+}
+
+.inventory-item-initial {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-subtle);
+}
+
+.inventory-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.inventory-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease-out;
+}
+
+.inventory-bar-fill.healthy { background: var(--color-emerald); }
+.inventory-bar-fill.medium { background: var(--color-amber); }
+.inventory-bar-fill.low { background: var(--color-rose); }
+.inventory-bar-fill.out { background: #94A3B8; }
+
+.inventory-item-pct {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.inventory-manage-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--light-border);
+}
+
+.inventory-manage-row:last-child {
+  border-bottom: none;
+}
+
+.inventory-manage-label {
+  font-weight: 600;
+  color: var(--text-title);
+  font-size: var(--text-sm);
+}
+
+.inventory-manage-input {
+  width: 100px;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--light-border);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
 /* --------------------------------------------------------------------------
    5. Tables & Data Lists
    -------------------------------------------------------------------------- */

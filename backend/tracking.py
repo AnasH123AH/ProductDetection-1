@@ -25,6 +25,7 @@ import threading
 import time
 
 import database
+import inventory
 
 _lock = threading.Lock()
 _tracks = {}          # track_id -> track state dict
@@ -141,11 +142,19 @@ def process_frame(detections, required_stable_frames=3, max_missed_frames=5,
                 _log(f"EXIT ID={tid} class={track['class_name']}")
                 _log(f"HISTORY Saved ONE exit event for {track['class_name']} (detection_id={det_id})")
 
+                # Inventory decrement happens HERE — the one place a physical
+                # product's EXIT EVENT is confirmed — and nowhere else.
+                # Idempotent per detection_id, so even if this were somehow
+                # invoked twice for the same saved detection, stock only
+                # ever moves once.
+                inv_result = inventory.decrement_stock_for_exit(track["class_name"], det_id)
+
                 exited.append({
                     "track_id": tid,
                     "class": track["class_name"],
                     "confidence": track["best_confidence"],
                     "detection_id": det_id,
+                    "inventory": inv_result,
                 })
                 del _tracks[tid]
                 _log(f"ID={tid} closed")

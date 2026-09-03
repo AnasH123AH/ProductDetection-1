@@ -241,12 +241,29 @@ const Api = {
     }
   },
 
-  async _postJson(endpoint, body) {
+  async getInventory() {
+    try {
+      const data = await this.request('/inventory');
+      return (data && data.inventory) ? data.inventory : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  async updateInventory(productName, stockQuantity) {
+    const data = await this._postJson(`/inventory/${encodeURIComponent(productName)}`, { stock_quantity: stockQuantity }, 'PUT');
+    if (data.success === false) {
+      throw new Error(data.error || 'Failed to update inventory');
+    }
+    return data;
+  },
+
+  async _postJson(endpoint, body, method = 'POST') {
     const bodyStr = JSON.stringify(body);
 
     const post = async (base) => {
       const resp = await fetch(`${base}${endpoint}`, {
-        method: 'POST',
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: bodyStr
       });

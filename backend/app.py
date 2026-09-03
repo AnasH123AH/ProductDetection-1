@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(__file__))
 import ai_assistant
 import database
 import detector
+import inventory
 import mailer
 import tracking
 
@@ -125,6 +126,20 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
             settings = database.get_settings()
             log_request("GET", path, 200, (time.perf_counter() - t0) * 1000)
             return self._send_json(settings)
+
+        # 7. Inventory GET
+        elif path == '/api/inventory':
+            items = inventory.get_inventory()
+            log_request("GET", path, 200, (time.perf_counter() - t0) * 1000)
+            return self._send_json({"success": True, "inventory": items})
+
+        # 8. Inventory Transaction Log GET
+        elif path == '/api/inventory/transactions':
+            product = query.get('product', [None])[0]
+            limit = int(query.get('limit', [50])[0])
+            txns = inventory.get_transactions(product, limit)
+            log_request("GET", path, 200, (time.perf_counter() - t0) * 1000)
+            return self._send_json({"success": True, "transactions": txns})
 
         else:
             log_request("GET", path, 404, (time.perf_counter() - t0) * 1000)
@@ -357,6 +372,49 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
             success = database.delete_detection(det_id)
             log_request("DELETE", path, 200 if success else 404, (time.perf_counter() - t0) * 1000)
             return self._send_json({"status": "deleted" if success else "not_found"})
+
+        else:
+            log_request("DELETE", path, 404, (time.perf_counter() - t0) * 1000)
+            return self._send_json({"error": f"Endpoint DELETE {path} not found"}, 404)
+
+    def do_PUT(self):
+        t0 = time.perf_counter()
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+
+        content_length = int(self.headers.get('Content-Length', 0))
+        put_data = self.rfile.read(content_length) if content_length > 0 else b'{}'
+        try:
+            payload = json.loads(put_data.decode('utf-8'))
+        except Exception:
+            payload = {}
+
+        # Admin: explicitly set/restock a product's stock (never triggered
+        # automatically — only this endpoint changes stock outside of a
+        # confirmed tracking EXIT EVENT).
+        if path.startswith('/api/inventory/'):
+            product_name = urllib.parse.unquote(path.split('/')[-1])
+            raw_qty = payload.get('stock_quantity')
+
+            if raw_qty is None or isinstance(raw_qty, bool) or not isinstance(raw_qty, (int, float)) or int(raw_qty) != raw_qty or raw_qty < 0:
+                log_request("PUT", path, 400, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": "stock_quantity must be a non-negative integer"}, 400)
+
+            try:
+                result = inventory.set_stock(product_name, int(raw_qty))
+                log_request("PUT", path, 200, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": True, **result})
+            except ValueError as e:
+                log_request("PUT", path, 400, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": str(e)}, 400)
+            except Exception as e:
+                print(f"[Inventory Error] {type(e).__name__}: {e}")
+                log_request("PUT", path, 500, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": "Failed to update inventory."}, 500)
+
+        else:
+            log_request("PUT", path, 404, (time.perf_counter() - t0) * 1000)
+            return self._send_json({"error": f"Endpoint PUT {path} not found"}, 404)
 
 def run_server():
     database.init_db()

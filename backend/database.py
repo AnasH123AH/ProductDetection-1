@@ -44,6 +44,46 @@ def init_db():
         )
     ''')
 
+    # 3. Inventory Table — one row per product, stock decremented only on a
+    # confirmed tracking EXIT EVENT (see backend/inventory.py + tracking.py).
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inventory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_name TEXT NOT NULL UNIQUE,
+            stock_quantity INTEGER NOT NULL DEFAULT 0,
+            initial_stock INTEGER NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 4. Inventory Transactions Table — audit log of every stock change.
+    # detection_id is UNIQUE (nullable) so a duplicate EXIT EVENT for the
+    # same saved detection can never decrement stock twice (see
+    # inventory.decrement_stock_for_exit()'s idempotency check).
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_name TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            quantity_change INTEGER NOT NULL,
+            stock_before INTEGER NOT NULL,
+            stock_after INTEGER NOT NULL,
+            detection_id INTEGER UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Seed one inventory row per real product class, 100 units each, only if
+    # the table is empty — never overwrites existing (possibly already
+    # decremented or admin-configured) stock on subsequent startups.
+    cursor.execute('SELECT COUNT(*) FROM inventory')
+    if cursor.fetchone()[0] == 0:
+        for product_name in ("Trident", "Donut", "Pickers", "Bahia"):
+            cursor.execute('''
+                INSERT INTO inventory (product_name, stock_quantity, initial_stock)
+                VALUES (?, 100, 100)
+            ''', (product_name,))
+
     # Seed realistic historical detections if empty
     cursor.execute('SELECT COUNT(*) FROM detections')
     count = cursor.fetchone()[0]
