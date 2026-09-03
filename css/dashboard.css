@@ -1097,6 +1097,22 @@
   border-color: var(--brand-primary-hover);
 }
 
+/* Same base .btn-ctrl dark-surface theming problem as above: "Generate
+   Report" is a secondary action next to the primary "Export PDF" button on
+   this light card, so give it a visible light-surface outline treatment
+   instead of the (already re-themed) solid brand fill. */
+#reportGenerateBtn.btn-ctrl {
+  background: var(--light-surface-alt);
+  border-color: var(--light-border);
+  color: var(--text-title);
+  cursor: pointer;
+}
+
+#reportGenerateBtn.btn-ctrl:hover:not(:disabled) {
+  background: #E2E8F0;
+  border-color: #CBD5E1;
+}
+
 /* --------------------------------------------------------------------------
    5. Tables & Data Lists
    -------------------------------------------------------------------------- */

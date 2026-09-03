@@ -258,6 +258,78 @@ const Api = {
     return data;
   },
 
+  _reportQuery(params) {
+    const q = new URLSearchParams();
+    q.set('period', params.period);
+    if (params.period === 'custom') {
+      q.set('start', params.start);
+      q.set('end', params.end);
+    }
+    return q.toString();
+  },
+
+  async getReportData(params) {
+    // Not routed through request() — a 400 here carries a specific,
+    // user-facing validation message (e.g. "Start date must not be after
+    // end date.") in its JSON body that request() would discard in favor of
+    // a generic "HTTP Error 400" once it sees a non-2xx status.
+    const endpoint = `/reports/inventory?${this._reportQuery(params)}`;
+
+    const fetchFrom = async (base) => {
+      const resp = await fetch(`${base}${endpoint}`);
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || data.success === false) {
+        const err = new Error(data.error || `Request failed (${resp.status})`);
+        err.status = resp.status;
+        throw err;
+      }
+      return data.report;
+    };
+
+    try {
+      return await fetchFrom(this.activeUrl);
+    } catch (err) {
+      if (err.status === undefined && this.activeUrl === API_BASE) {
+        const report = await fetchFrom(DIRECT_BACKEND);
+        this.activeUrl = DIRECT_BACKEND;
+        return report;
+      }
+      throw err;
+    }
+  },
+
+  /** Fetches the PDF as a Blob (mirrors request()'s /api then direct-backend
+   * fallback, since a binary response can't go through request()'s .json()). */
+  async getReportPdfBlob(params) {
+    const endpoint = `/reports/inventory/pdf?${this._reportQuery(params)}`;
+
+    const fetchFrom = async (base) => {
+      const resp = await fetch(`${base}${endpoint}`);
+      if (!resp.ok) {
+        let message = `Request failed (${resp.status})`;
+        try {
+          const data = await resp.clone().json();
+          if (data && data.error) message = data.error;
+        } catch (e) {}
+        const err = new Error(message);
+        err.status = resp.status;
+        throw err;
+      }
+      return resp.blob();
+    };
+
+    try {
+      return await fetchFrom(this.activeUrl);
+    } catch (err) {
+      if (err.status === undefined && this.activeUrl === API_BASE) {
+        const blob = await fetchFrom(DIRECT_BACKEND);
+        this.activeUrl = DIRECT_BACKEND;
+        return blob;
+      }
+      throw err;
+    }
+  },
+
   async _postJson(endpoint, body, method = 'POST') {
     const bodyStr = JSON.stringify(body);
 

@@ -21,6 +21,7 @@ import database
 import detector
 import inventory
 import mailer
+import reports
 import tracking
 
 PORT = 8000
@@ -58,7 +59,17 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
         self._send_cors_headers()
         self.end_headers()
         self.wfile.write(json.dumps(data, default=str).encode('utf-8'))
-        
+
+    def _send_pdf(self, pdf_bytes, filename):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/pdf')
+        self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+        self.send_header('Content-Length', str(len(pdf_bytes)))
+        self._send_cors_headers()
+        self.end_headers()
+        self.wfile.write(pdf_bytes)
+
+
     def do_OPTIONS(self):
         self.send_response(204)
         self._send_cors_headers()
@@ -140,6 +151,42 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
             txns = inventory.get_transactions(product, limit)
             log_request("GET", path, 200, (time.perf_counter() - t0) * 1000)
             return self._send_json({"success": True, "transactions": txns})
+
+        # 9. Inventory & Product Exit Report — JSON (preview/summary)
+        elif path == '/api/reports/inventory':
+            period = query.get('period', ['last_7_days'])[0]
+            start = query.get('start', [None])[0]
+            end = query.get('end', [None])[0]
+            try:
+                report = reports.generate_report_data(period, start, end)
+                log_request("GET", path, 200, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": True, "report": report})
+            except reports.ReportError as e:
+                log_request("GET", path, 400, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": str(e)}, 400)
+            except Exception as e:
+                print(f"[Report Error] {type(e).__name__}: {e}")
+                log_request("GET", path, 500, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": "Failed to generate report."}, 500)
+
+        # 10. Inventory & Product Exit Report — PDF download
+        elif path == '/api/reports/inventory/pdf':
+            period = query.get('period', ['last_7_days'])[0]
+            start = query.get('start', [None])[0]
+            end = query.get('end', [None])[0]
+            try:
+                report = reports.generate_report_data(period, start, end)
+                pdf_bytes = reports.render_pdf(report)
+                filename = f"visionaryai_inventory_report_{report['start_date']}_to_{report['end_date']}.pdf"
+                log_request("GET", path, 200, (time.perf_counter() - t0) * 1000)
+                return self._send_pdf(pdf_bytes, filename)
+            except reports.ReportError as e:
+                log_request("GET", path, 400, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": str(e)}, 400)
+            except Exception as e:
+                print(f"[Report Error] {type(e).__name__}: {e}")
+                log_request("GET", path, 500, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": "Failed to generate PDF report."}, 500)
 
         else:
             log_request("GET", path, 404, (time.perf_counter() - t0) * 1000)

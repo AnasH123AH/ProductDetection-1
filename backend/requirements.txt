@@ -3,3 +3,7 @@
 # per-physical-product logic). Ultralytics can auto-install this at runtime
 # if it's missing, but that's unreliable — install it explicitly instead.
 lapx>=0.5.2
+
+# Required for the Inventory & Product Exit PDF report (backend/reports.py,
+# GET /api/reports/inventory/pdf).
+reportlab>=4.0.0

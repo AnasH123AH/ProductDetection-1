@@ -321,6 +321,53 @@
             </div>
           </div>
 
+          <!-- Export Report -->
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="color:var(--brand-primary);">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                Export Report
+              </h3>
+            </div>
+            <div class="card-body">
+              <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-4);">
+                Generates a real inventory &amp; product exit PDF report for the selected period, from the current database. Not demo data.
+              </p>
+              <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: flex-end;">
+                <div>
+                  <label class="form-label" for="reportPeriodSelect">Period</label>
+                  <select id="reportPeriodSelect" class="filter-select" style="margin-top: 0.35rem;">
+                    <option value="last_3_days">Last 3 Days</option>
+                    <option value="last_7_days" selected>Last 7 Days</option>
+                    <option value="last_30_days">Last 30 Days</option>
+                    <option value="this_month">This Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="this_year">This Year</option>
+                    <option value="last_year">Last Year</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+                </div>
+                <div id="reportCustomRangeStart" style="display: none;">
+                  <label class="form-label" for="reportStartDate">Start Date</label>
+                  <input type="date" id="reportStartDate" class="filter-input" style="margin-top: 0.35rem;">
+                </div>
+                <div id="reportCustomRangeEnd" style="display: none;">
+                  <label class="form-label" for="reportEndDate">End Date</label>
+                  <input type="date" id="reportEndDate" class="filter-input" style="margin-top: 0.35rem;">
+                </div>
+                <button type="button" id="reportGenerateBtn" class="btn-ctrl">Generate Report</button>
+                <button type="button" id="reportExportBtn" class="btn-ctrl primary">Export PDF</button>
+              </div>
+              <div id="reportPreview" style="display: none; margin-top: var(--space-5);"></div>
+            </div>
+          </div>
+
           <!-- Recent Detections Live Table -->
           <div class="card">
             <div class="card-header">
@@ -1220,6 +1267,7 @@
   <script src="js/products.js"></script>
   <script src="js/analytics.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/reports.js"></script>
   <script src="js/backend.js"></script>
   <script src="js/chatbot.js"></script>
 
