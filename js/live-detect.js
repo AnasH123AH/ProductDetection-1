@@ -36,6 +36,8 @@ const LiveDetectModule = {
     required_stable_frames: 3,
     duplicate_prevention: "ON",
     detection_cooldown: 1.0,
+    object_tracking_enabled: "ON",
+    max_missed_frames: 5,
     save_detection_history: "ON",
     save_detection_images: "OFF",
     display_bounding_boxes: "ON",
@@ -51,9 +53,9 @@ const LiveDetectModule = {
     auto_focus: "ON"
   },
 
-  // State Tracking for 3-Consecutive Frame Stability & 1.0s Duplicate Cooldown
-  classFrameCounts: {},       // { "Donut": 3, "Trident": 1 }
-  lastLoggedTimestamps: {},   // { "Donut": 1725000000000 }
+  // Object identity/lifecycle (WAITING -> TRACKING -> EXIT -> RESET) is tracked
+  // server-side per physical product (see backend/tracking.py) — the frontend
+  // just samples frames and reflects whatever the backend reports back.
   animationFrameId: null,
   lastInferenceTime: 0,
   fpsCounter: 0,
@@ -155,6 +157,8 @@ const LiveDetectModule = {
     this.settings.required_stable_frames = parseInt(newSettings.required_stable_frames || "3", 10);
     this.settings.duplicate_prevention = newSettings.duplicate_prevention || "ON";
     this.settings.detection_cooldown = parseFloat(newSettings.detection_cooldown || "1.0");
+    this.settings.object_tracking_enabled = newSettings.object_tracking_enabled || "ON";
+    this.settings.max_missed_frames = parseInt(newSettings.max_missed_frames || "5", 10);
     this.settings.save_detection_history = newSettings.save_detection_history || "ON";
     this.settings.save_detection_images = newSettings.save_detection_images || "OFF";
 
@@ -243,6 +247,9 @@ const LiveDetectModule = {
 
       this.updateButtonStates();
       this.resizeCanvas();
+      // Fresh session -> fresh WAITING state server-side, so no stale track IDs
+      // from a previous session ever leak in.
+      Api.resetTracking().catch(() => {});
       this.runDetectionLoop();
     } catch (err) {
       console.warn('Primary camera access note, falling back to default video input:', err);
@@ -256,6 +263,7 @@ const LiveDetectModule = {
         if (placeholder) placeholder.classList.add('hidden');
         this.updateButtonStates();
         this.resizeCanvas();
+        Api.resetTracking().catch(() => {});
         this.runDetectionLoop();
       } catch (fallbackErr) {
         console.error('Camera access failed:', fallbackErr);
@@ -275,7 +283,6 @@ const LiveDetectModule = {
     this.isRunning = false;
     this.isPaused = false;
     this.currentDetections = [];
-    this.classFrameCounts = {};
     this._backendOfflineNotified = false;
 
     if (this.animationFrameId) {
@@ -368,12 +375,28 @@ const LiveDetectModule = {
       const effectiveMaxDet = this.settings.max_detections || 10;
       const effectiveMinSize = this.settings.min_detection_size || 20;
 
+      // A physical product = ONE Detection History record, written by the
+      // backend's object tracker only once it genuinely leaves the camera
+      // zone (see backend/tracking.py) — not once per frame it's visible in.
+      // `track: true` tells the backend to run the tracker instead of a
+      // stateless single-frame detect; the resulting exit events (if any)
+      // come back in `result.exited`.
       const result = await Api.detectImage(
         frameData,
         'Live Camera',
         effectiveConf,
         effectiveIou,
-        false // Manual history persistence below based on stability & cooldown
+        this.settings.save_detection_history === 'ON',
+        this.settings.save_detection_images === 'ON',
+        {
+          track: true,
+          object_tracking_enabled: this.settings.object_tracking_enabled,
+          max_missed_frames: this.settings.max_missed_frames,
+          detection_stability: this.settings.detection_stability,
+          required_stable_frames: this.settings.required_stable_frames,
+          duplicate_prevention: this.settings.duplicate_prevention,
+          detection_cooldown: this.settings.detection_cooldown
+        }
       );
       const latency = Math.round(performance.now() - startTime);
 
@@ -388,81 +411,68 @@ const LiveDetectModule = {
       this.clearBackendOfflineState();
 
       const rawDetections = (result && result.detections) ? result.detections : [];
+      const activeTracks = (result && result.active_tracks) ? result.active_tracks : [];
+      const exitedTracks = (result && result.exited) ? result.exited : [];
 
-      // 1. HARD CONFIDENCE & MIN SIZE FILTERING
-      const rawValidDetections = [];
-      const seenClassesInCurrentFrame = new Set();
-
+      // Hard confidence & min-size filtering — for the live bounding-box overlay only.
+      // Whether a product ever gets SAVED to history is decided entirely
+      // server-side by the tracker's lifecycle, not by anything here.
+      const validDetections = [];
       for (const det of rawDetections) {
         const normConf = this.parseConfidence(det.confidence);
-        // Calculate box pixel size
         const [x1, y1, x2, y2] = det.bbox || [0, 0, 0, 0];
         const boxW = (x2 - x1) * offCanvas.width;
         const boxH = (y2 - y1) * offCanvas.height;
 
-        // Discard any detection strictly below 0.70 or smaller than min_detection_size
         if (normConf >= 0.70 && normConf >= effectiveConf && boxW >= effectiveMinSize && boxH >= effectiveMinSize) {
           det.confidence = normConf;
-          rawValidDetections.push(det);
-          seenClassesInCurrentFrame.add(det.class);
+          validDetections.push(det);
         }
       }
 
-      // Limit to max_detections
-      const cappedValid = rawValidDetections.slice(0, effectiveMaxDet);
+      this.currentDetections = validDetections.slice(0, effectiveMaxDet);
 
-      // 2. DETECTION STABILITY (Required 3 Consecutive Frames)
-      const reqFrames = this.settings.detection_stability === 'ON' ? (this.settings.required_stable_frames || 3) : 1;
-      
-      // Update frame counters per class
-      for (const cls of ['Trident', 'Donut', 'Pickers', 'Bahia']) {
-        if (seenClassesInCurrentFrame.has(cls)) {
-          this.classFrameCounts[cls] = (this.classFrameCounts[cls] || 0) + 1;
-        } else {
-          this.classFrameCounts[cls] = 0;
-        }
-      }
+      // Prefer a track that's actually reached TRACKING state (confirmed
+      // stable) for the telemetry readout, so the UI doesn't flicker onto a
+      // not-yet-confirmed candidate.
+      const confirmedTrack = activeTracks.find(t => t.state === 'TRACKING');
 
-      // Filter for stable detections meeting consecutive frame count requirement
-      const stableDetections = cappedValid.filter(det => {
-        const count = this.classFrameCounts[det.class] || 0;
-        return count >= reqFrames;
-      });
-
-      this.currentDetections = stableDetections;
-
-      if (stableDetections.length > 0) {
-        const top = stableDetections[0];
-        this.updateTelemetry(top, latency, stableDetections.length);
-
-        // 3. DUPLICATE DETECTION PREVENTION & HISTORY PERSISTENCE (1.0s Cooldown)
-        if (this.settings.save_detection_history === 'ON') {
-          const cooldownMs = (this.settings.duplicate_prevention === 'ON' ? (this.settings.detection_cooldown || 1.0) : 0.0) * 1000;
-          const nowMs = Date.now();
-          const lastLogged = this.lastLoggedTimestamps[top.class] || 0;
-
-          if (nowMs - lastLogged >= cooldownMs) {
-            this.lastLoggedTimestamps[top.class] = nowMs;
-            
-            // Save detection record with save_detection_images parameter (OFF by default)
-            Api.detectImage(
-              frameData,
-              'Live Camera',
-              effectiveConf,
-              effectiveIou,
-              true, // Save to history
-              this.settings.save_detection_images === 'ON'
-            ).catch(() => {});
-          }
-        }
-
+      if (this.currentDetections.length > 0) {
+        this.updateTelemetry(this.currentDetections[0], latency, this.currentDetections.length, confirmedTrack);
       } else {
-        this.updateTelemetry(null, latency, 0);
+        this.updateTelemetry(null, latency, 0, null);
+      }
+
+      if (exitedTracks.length > 0) {
+        this.handleExitEvents(exitedTracks);
       }
     } catch (e) {
       console.warn('Frame detection skipped:', e);
       this.currentDetections = [];
-      this.updateTelemetry(null, 0, 0);
+      this.updateTelemetry(null, 0, 0, null);
+    }
+  },
+
+  handleExitEvents(exitedTracks) {
+    exitedTracks.forEach(ev => {
+      if (typeof showToast === 'function') {
+        showToast(`${ev.class} left the camera zone — saved to Detection History.`, 'success', 3000);
+      }
+    });
+
+    const trackIdEl = document.getElementById('liveTrackingId');
+    if (trackIdEl && exitedTracks.length > 0) {
+      trackIdEl.classList.remove('hidden');
+      trackIdEl.textContent = `${exitedTracks[0].class} — EXIT DETECTED`;
+      // updateTelemetry() runs every ~240ms and would otherwise immediately
+      // overwrite this with the current tracking-id state (or hide it) on
+      // the very next frame — hold it off until the flash window elapses.
+      this._exitFlashUntil = Date.now() + 1500;
+      clearTimeout(this._exitFlashTimeout);
+      this._exitFlashTimeout = setTimeout(() => {
+        this._exitFlashUntil = 0;
+        trackIdEl.classList.add('hidden');
+      }, 1500);
     }
   },
 
@@ -573,7 +583,7 @@ const LiveDetectModule = {
     }
   },
 
-  updateTelemetry(topDetection, latencyMs, totalObjects) {
+  updateTelemetry(topDetection, latencyMs, totalObjects, trackInfo) {
     const prodNameEl = document.getElementById('liveCurrentProduct');
     const confValEl = document.getElementById('liveCurrentConfidence');
     const confBarEl = document.getElementById('liveConfidenceBar');
@@ -581,6 +591,18 @@ const LiveDetectModule = {
     const countEl = document.getElementById('liveObjectCount');
     const statusEl = document.getElementById('liveDetectionStatus');
     const detectionBox = document.getElementById('currentDetectionBox');
+    const trackIdEl = document.getElementById('liveTrackingId');
+
+    // Let a just-fired "EXIT DETECTED" flash finish its own 1.5s window
+    // instead of being immediately overwritten by this frame's state.
+    if (trackIdEl && !(this._exitFlashUntil && Date.now() < this._exitFlashUntil)) {
+      if (trackInfo && trackInfo.track_id !== undefined && trackInfo.track_id !== null) {
+        trackIdEl.classList.remove('hidden');
+        trackIdEl.textContent = `Tracking ID: ${trackInfo.track_id}`;
+      } else {
+        trackIdEl.classList.add('hidden');
+      }
+    }
 
     let validTop = null;
     if (topDetection) {

@@ -191,6 +191,108 @@ def detect_image(image_input, conf_threshold=0.70, iou_threshold=0.45, max_detec
         "status": "success"
     }
 
+def detect_and_track(image_input, conf_threshold=0.70, iou_threshold=0.45, max_detections=10, min_detection_size=20):
+    """
+    Same filtering/output shape as detect_image(), but runs Ultralytics'
+    built-in tracker (model.track(..., persist=True)) instead of a stateless
+    model.predict(). persist=True keeps the tracker's internal identity state
+    alive on `yolo_model` across successive calls, so the SAME physical
+    object keeps the SAME track_id across frames as long as this function is
+    called in temporal order for one continuous camera session (see
+    reset_tracker() below, which must be called when a session starts/stops
+    so a new session never inherits stale IDs). Each detection dict gets an
+    extra "track_id" key (int, or None if the tracker hasn't assigned an
+    identity to it yet — e.g. its very first frame).
+
+    Only intended for the live-camera path; one-off snapshots/CSV import
+    should keep using detect_image().
+    """
+    effective_conf = max(HARD_CONFIDENCE_THRESHOLD, float(conf_threshold if conf_threshold is not None else HARD_CONFIDENCE_THRESHOLD))
+    max_det = int(max_detections if max_detections is not None else 10)
+    min_size = float(min_detection_size if min_detection_size is not None else 20)
+
+    start_time = time.time()
+    img = load_image(image_input)
+    w, h = img.size
+
+    detections = []
+
+    if yolo_model is not None:
+        try:
+            results = yolo_model.track(
+                img, conf=effective_conf, iou=iou_threshold, max_det=max_det,
+                persist=True, tracker="bytetrack.yaml", verbose=False
+            )
+            for r in results:
+                boxes = r.boxes
+                for box in boxes:
+                    cls_id = int(box.cls[0].item())
+                    conf = float(box.conf[0].item())
+
+                    if conf < HARD_CONFIDENCE_THRESHOLD or conf < effective_conf:
+                        continue
+
+                    xyxy = box.xyxy[0].tolist()
+                    box_w = xyxy[2] - xyxy[0]
+                    box_h = xyxy[3] - xyxy[1]
+
+                    if box_w < min_size or box_h < min_size:
+                        continue
+
+                    cls_name = CLASSES.get(cls_id, yolo_model.names.get(cls_id, f"Class_{cls_id}"))
+                    norm_bbox = [
+                        round(max(0.0, xyxy[0] / w), 4),
+                        round(max(0.0, xyxy[1] / h), 4),
+                        round(min(1.0, xyxy[2] / w), 4),
+                        round(min(1.0, xyxy[3] / h), 4)
+                    ]
+                    track_id = int(box.id[0].item()) if box.id is not None else None
+                    detections.append({
+                        "class": cls_name,
+                        "class_id": cls_id,
+                        "confidence": round(conf, 3),
+                        "bbox": norm_bbox,
+                        "pixel_bbox": [round(c, 1) for c in xyxy],
+                        "color": CLASS_COLORS.get(cls_name, "#0284C7"),
+                        "track_id": track_id
+                    })
+        except Exception as e:
+            print(f"[Detector] YOLO track error: {e}")
+            detections = []
+    else:
+        print("[Detector] Warning: yolo_model is None during tracked detection.")
+
+    detections = [d for d in detections if d.get("confidence", 0.0) >= HARD_CONFIDENCE_THRESHOLD][:max_det]
+
+    latency = round((time.time() - start_time) * 1000, 1)
+
+    return {
+        "detections": detections,
+        "total_objects": len(detections),
+        "image_size": [w, h],
+        "inference_latency_ms": max(2.5, latency),
+        "model": model_info["name"],
+        "confidence_threshold": effective_conf,
+        "status": "success"
+    }
+
+
+def reset_tracker():
+    """Clears Ultralytics' internal tracker state. Must be called whenever a
+    live camera session starts (or stops), so track IDs never carry over
+    between unrelated sessions."""
+    if yolo_model is None:
+        return
+    try:
+        predictor = getattr(yolo_model, "predictor", None)
+        trackers = getattr(predictor, "trackers", None) if predictor else None
+        if trackers:
+            for t in trackers:
+                t.reset()
+    except Exception as e:
+        print(f"[Detector] Tracker reset skipped: {e}")
+
+
 def run_benchmark(iterations=10):
     """
     Runs multi-pass inference benchmark measuring mean latency and throughput.

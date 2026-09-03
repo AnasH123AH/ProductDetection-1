@@ -13,6 +13,8 @@ const SettingsModule = {
     required_stable_frames: "3",
     duplicate_prevention: "ON",
     detection_cooldown: "1.0",
+    object_tracking_enabled: "ON",
+    max_missed_frames: "5",
     save_detection_history: "ON",
     save_detection_images: "OFF",
     display_bounding_boxes: "ON",
@@ -61,6 +63,8 @@ const SettingsModule = {
           required_stable_frames: document.getElementById('settingRequiredStableFrames')?.value || "3",
           duplicate_prevention: document.getElementById('settingDuplicatePrevention')?.value || "ON",
           detection_cooldown: document.getElementById('settingDetectionCooldown')?.value || "1.0",
+          object_tracking_enabled: document.getElementById('settingObjectTracking')?.value || "ON",
+          max_missed_frames: document.getElementById('settingMaxMissedFrames')?.value || "5",
           save_detection_history: document.getElementById('settingSaveDetectionHistory')?.value || "ON",
           save_detection_images: document.getElementById('settingSaveDetectionImages')?.value || "OFF",
           display_bounding_boxes: document.getElementById('settingDisplayBoundingBoxes')?.value || "ON",
@@ -188,6 +192,8 @@ const SettingsModule = {
     setVal('settingRequiredStableFrames', this.activeSettings.required_stable_frames);
     setVal('settingDuplicatePrevention', this.activeSettings.duplicate_prevention);
     setVal('settingDetectionCooldown', this.activeSettings.detection_cooldown);
+    setVal('settingObjectTracking', this.activeSettings.object_tracking_enabled);
+    setVal('settingMaxMissedFrames', this.activeSettings.max_missed_frames);
     setVal('settingSaveDetectionHistory', this.activeSettings.save_detection_history);
     setVal('settingSaveDetectionImages', this.activeSettings.save_detection_images);
     setVal('settingDisplayBoundingBoxes', this.activeSettings.display_bounding_boxes);

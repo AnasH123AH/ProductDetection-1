@@ -1,0 +1,5 @@
+# Required for Ultralytics' built-in object tracker (model.track(), used by
+# backend/detector.py's detect_and_track() for Live Detection's one-event-
+# per-physical-product logic). Ultralytics can auto-install this at runtime
+# if it's missing, but that's unreliable — install it explicitly instead.
+lapx>=0.5.2
