@@ -2431,6 +2431,11 @@ button:focus-visible {
   border-bottom-right-radius: var(--radius-sm);
 }
 
+.chatbot-msg-typing {
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
 .chatbot-quick-replies {
   display: flex;
   flex-wrap: wrap;
