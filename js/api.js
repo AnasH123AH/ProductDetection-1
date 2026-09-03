@@ -232,15 +232,14 @@ const Api = {
     }
   },
 
-  async requestPasswordReset(email) {
-    const endpoint = '/auth/forgot-password';
-    const body = JSON.stringify({ email });
+  async _postJson(endpoint, body) {
+    const bodyStr = JSON.stringify(body);
 
     const post = async (base) => {
       const resp = await fetch(`${base}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body
+        body: bodyStr
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
@@ -262,6 +261,18 @@ const Api = {
       }
       throw err;
     }
+  },
+
+  async requestPasswordReset(email) {
+    return this._postJson('/auth/forgot-password', { email });
+  },
+
+  async sendChatMessage(message, history = [], user = null) {
+    const data = await this._postJson('/chat', { message, history, user });
+    if (data.success === false) {
+      throw new Error(data.error || 'AI assistant error');
+    }
+    return data.response;
   },
 
   async getProducts() {

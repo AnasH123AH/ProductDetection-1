@@ -16,6 +16,7 @@ from datetime import datetime
 # Add current directory to path
 sys.path.append(os.path.dirname(__file__))
 
+import ai_assistant
 import database
 import detector
 import mailer
@@ -253,6 +254,39 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
                 del RESET_TOKENS[token]
                 log_request("POST", path, 502, (time.perf_counter() - t0) * 1000)
                 return self._send_json({"error": f"Failed to send reset email: {str(e)}"}, 502)
+
+        # 5. AI Chat Endpoint
+        elif path == '/api/chat':
+            message = payload.get('message', '')
+            history = payload.get('history', [])
+            user_info = payload.get('user')
+            user_display_name = user_info.get('name') if isinstance(user_info, dict) else None
+
+            if not ai_assistant.is_configured():
+                log_request("POST", path, 503, (time.perf_counter() - t0) * 1000)
+                return self._send_json({
+                    "success": False,
+                    "error": "The AI assistant is not configured on this server (missing OPENAI_API_KEY)."
+                }, 503)
+
+            try:
+                reply = ai_assistant.call_chat(
+                    message,
+                    history if isinstance(history, list) else [],
+                    user_display_name
+                )
+                log_request("POST", path, 200, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": True, "response": reply})
+            except ValueError as e:
+                log_request("POST", path, 400, (time.perf_counter() - t0) * 1000)
+                return self._send_json({"success": False, "error": str(e)}, 400)
+            except Exception as e:
+                print(f"[AI Chat Error] {type(e).__name__}: {e}")
+                log_request("POST", path, 502, (time.perf_counter() - t0) * 1000)
+                return self._send_json({
+                    "success": False,
+                    "error": "The AI assistant is temporarily unavailable. Please try again."
+                }, 502)
 
         else:
             log_request("POST", path, 404, (time.perf_counter() - t0) * 1000)
