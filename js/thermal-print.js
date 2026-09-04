@@ -276,20 +276,47 @@ ${debug}
 <div class="thermal-receipt">
   <div class="thermal-header">
     <div class="brand">VISIONARYAI</div>
-    <div class="subtitle">Detection Receipt</div>
+    <div class="subtitle">Product Detection</div>
   </div>
   <hr class="thermal-divider">
-  <div class="thermal-meta">
-    <div><span class="meta-label">Detection ID</span><span class="meta-value">#${this._escape(detection.id)}</span></div>
-    <div><span class="meta-label">Product</span><span class="meta-value">${this._escape(detection.product_name)}</span></div>
-    <div><span class="meta-label">Event</span><span class="meta-value">EXIT (confirmed)</span></div>
-    <div><span class="meta-label">Confidence</span><span class="meta-value">${confPct}%</span></div>
-    <div><span class="meta-label">Source</span><span class="meta-value">${this._escape(detection.source || 'Live Camera')}</span></div>
-    <div><span class="meta-label">Date</span><span class="meta-value">${this._escape(date)}</span></div>
-    <div><span class="meta-label">Time</span><span class="meta-value">${this._escape(time)}</span></div>
-    <div><span class="meta-label">Model</span><span class="meta-value">${this._escape(detection.model_name || '—')}</span></div>
+
+  <div class="thermal-field">
+    <div class="thermal-field-label">Product</div>
+    <div class="thermal-field-value">${this._escape(detection.product_name)}</div>
   </div>
+  <div class="thermal-field">
+    <div class="thermal-field-label">Confidence</div>
+    <div class="thermal-field-value">${confPct}%</div>
+  </div>
+  <div class="thermal-field">
+    <div class="thermal-field-label">Status</div>
+    <div class="thermal-field-value">EXIT &middot; Confirmed</div>
+  </div>
+  <div class="thermal-field">
+    <div class="thermal-field-label">Source</div>
+    <div class="thermal-field-value">${this._escape(detection.source || 'Live Camera')}</div>
+  </div>
+  <div class="thermal-field">
+    <div class="thermal-field-label">Date</div>
+    <div class="thermal-field-value">${this._escape(date)}</div>
+  </div>
+  <div class="thermal-field">
+    <div class="thermal-field-label">Time</div>
+    <div class="thermal-field-value">${this._escape(time)}</div>
+  </div>
+
   <hr class="thermal-divider">
+  <div class="thermal-field">
+    <div class="thermal-field-label">Detection ID</div>
+    <div class="thermal-field-value secondary">#${this._escape(detection.id)}</div>
+  </div>
+  <div class="thermal-field">
+    <div class="thermal-field-label">Model</div>
+    <div class="thermal-field-value secondary">${this._escape(detection.model_name || '—')}</div>
+  </div>
+
+  <hr class="thermal-divider">
+  <div class="thermal-footer">Thank you</div>
   <div class="thermal-footer">VisionaryAI &middot; ${PRINTER_CONFIG.printerName}</div>
 </div>
 </body></html>`;
@@ -325,7 +352,7 @@ ${debug}
     if (!styleEl || styleEl.dataset.autoHeight !== '1') return;
     const el = win.document.querySelector('.thermal-receipt');
     if (!el) return;
-    const heightMm = Math.ceil(this._pxToMm(el.getBoundingClientRect().height)) + 2; // small safety margin
+    const heightMm = Math.ceil(this._pxToMm(el.getBoundingClientRect().height)) + 3; // small safety margin
     styleEl.textContent = `@page { size: ${PRINTER_CONFIG.paperWidth}mm ${heightMm}mm; margin: 0; }`;
   },
 
