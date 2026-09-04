@@ -53,6 +53,31 @@ const PrintEngine = {
     return { date: date || '—', time: time || '—' };
   },
 
+  // Belt-and-suspenders: css/a4-print.css and css/thermal-print.css are the
+  // real source of truth for layout, but if either fails to load (a stale
+  // cache, a proxy hiccup, a future routing change) the browser silently
+  // falls back to its own default page size — Letter, not A4 or 80mm,
+  // confirmed directly by blocking each stylesheet in testing. These few
+  // physically-critical rules (the @page size itself, and — for thermal —
+  // the 72.1mm content width) are duplicated inline in every generated
+  // document's <head> so the correct paper size and no-overflow guarantee
+  // hold even if the linked stylesheet never loads at all.
+  _criticalA4Style() {
+    return `<style>
+      @page { size: A4; margin: 18mm 16mm; }
+      html, body { margin: 0; padding: 0; }
+      .a4-report { max-width: 178mm; margin: 0 auto; box-sizing: border-box; }
+    </style>`;
+  },
+
+  _criticalThermalStyle() {
+    return `<style>
+      html, body { width: ${PRINTER_CONFIG.paperWidth}mm; margin: 0; padding: 0; }
+      .thermal-receipt { width: ${PRINTER_CONFIG.printableWidth}mm; max-width: ${PRINTER_CONFIG.printableWidth}mm; margin: 0 auto; box-sizing: border-box; }
+      .thermal-receipt * { max-width: 100%; box-sizing: border-box; }
+    </style>`;
+  },
+
   _debugBlock(mode, cssClass, extra) {
     if (!extra || !extra.debug) return '';
     const lines = [
@@ -115,6 +140,7 @@ const PrintEngine = {
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Inventory Report — ${this._escape(report.start_date)} to ${this._escape(report.end_date)}</title>
 <link rel="stylesheet" href="${base}/css/a4-print.css">
+${this._criticalA4Style()}
 </head><body>
 <div class="a4-report">
   ${debug}
@@ -182,6 +208,7 @@ const PrintEngine = {
 <title>VisionaryAI Thermal Report — ${this._escape(report.start_date)} to ${this._escape(report.end_date)}</title>
 <link rel="stylesheet" href="${base}/css/thermal-print.css">
 <style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${format.height}mm; margin: 0; }</style>
+${this._criticalThermalStyle()}
 </head><body>
 ${debug}
 <div class="thermal-receipt" style="min-height: ${format.height}mm;">
@@ -243,6 +270,7 @@ ${debug}
 <title>VisionaryAI Detection Receipt #${this._escape(detection.id)}</title>
 <link rel="stylesheet" href="${base}/css/thermal-print.css">
 <style id="thermalPageSize" data-auto-height="1">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${THERMAL_FORMATS.LONG.height}mm; margin: 0; }</style>
+${this._criticalThermalStyle()}
 </head><body>
 ${debug}
 <div class="thermal-receipt">
