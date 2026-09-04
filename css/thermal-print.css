@@ -64,8 +64,8 @@ html, body {
    label-left/value-right rows. Not used by the single-record receipt,
    which uses the larger stacked .thermal-field-* below instead. */
 .thermal-meta {
-  font-size: 10px;
-  margin-bottom: 2mm;
+  font-size: 12px;
+  margin-bottom: 2.5mm;
 }
 
 .thermal-meta div {
@@ -120,7 +120,7 @@ html, body {
 }
 
 .thermal-section-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -131,7 +131,7 @@ html, body {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .thermal-table th,
@@ -164,8 +164,8 @@ html, body {
 .thermal-summary-row {
   display: flex;
   justify-content: space-between;
-  font-size: 10.5px;
-  padding: 0.6mm 0;
+  font-size: 12.5px;
+  padding: 0.8mm 0;
 }
 
 .thermal-summary-row .label {
@@ -177,7 +177,7 @@ html, body {
 }
 
 .thermal-note {
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
   margin-top: 2mm;
   color: #334155;
@@ -185,7 +185,7 @@ html, body {
 
 .thermal-footer {
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 3.5mm;
   color: #334155;
 }

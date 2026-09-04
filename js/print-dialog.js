@@ -139,10 +139,14 @@ const PrintDialog = {
       let html, widthMm, heightMm, selectedHeightLabel, printMode;
 
       if (this._mode === 'receipt') {
-        html = PrintEngine.buildThermalReceiptDocument(this._detection, { debug: showDebug });
+        // Same measurement PrintEngine.printThermalReceipt() uses for the
+        // real print, so the preview's height is never a guess that could
+        // drift from what actually prints.
+        const measuredHeightMm = await PrintEngine.measureThermalReceiptHeightMm(this._detection, { debug: showDebug });
+        html = PrintEngine.buildThermalReceiptDocument(this._detection, { debug: showDebug, heightMm: measuredHeightMm });
         widthMm = PRINTER_CONFIG.printableWidth;
-        heightMm = null; // auto — sized to content after load
-        selectedHeightLabel = 'auto (content-sized)';
+        heightMm = measuredHeightMm;
+        selectedHeightLabel = `${measuredHeightMm}mm (auto, content-sized)`;
         printMode = 'THERMAL';
       } else if (this._isThermal()) {
         const format = getThermalFormatByKey(this._thermalFormatKey);
@@ -162,17 +166,8 @@ const PrintDialog = {
       }
 
       frame.style.width = `${widthMm}mm`;
-      frame.style.height = heightMm ? `${heightMm}mm` : '400px';
+      frame.style.height = `${heightMm}mm`;
       frame.srcdoc = html;
-
-      if (heightMm === null) {
-        frame.addEventListener('load', () => {
-          try {
-            const h = frame.contentDocument.body.scrollHeight;
-            if (h > 0) frame.style.height = `${h + 20}px`;
-          } catch (e) {}
-        }, { once: true });
-      }
 
       if (showDebug) {
         debugPanel.hidden = false;
@@ -199,7 +194,7 @@ const PrintDialog = {
 
     try {
       if (this._mode === 'receipt') {
-        PrintEngine.printThermalReceipt(this._detection);
+        await PrintEngine.printThermalReceipt(this._detection);
       } else if (this._isThermal()) {
         const report = await this._currentReportData();
         PrintEngine.printThermal(report, this._thermalFormatKey);

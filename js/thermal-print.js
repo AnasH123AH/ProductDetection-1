@@ -256,20 +256,37 @@ ${debug}
   // Thermal — single Detection History record (compact receipt)
   // -------------------------------------------------------------------
 
+  // opts.heightMm is the receipt's real content height, already measured by
+  // measureThermalReceiptHeightMm() — @page is written with that concrete
+  // value from the very first paint. There is no placeholder-then-patch
+  // step for the copy that actually gets printed: window.print()'s own
+  // preview/print pipeline was found to sometimes snapshot @page before an
+  // async DOM mutation lands (verified against a real printed receipt that
+  // showed a large blank gap at the top, consistent with the browser having
+  // used a stale/placeholder page height for layout). Measuring first and
+  // writing once removes that race entirely rather than tuning timeouts
+  // around it. If heightMm is omitted (used internally by
+  // measureThermalReceiptHeightMm's own measurement pass, which throws this
+  // copy away and never prints or previews it), a generous placeholder is
+  // used so the measurement pass itself never clips.
   buildThermalReceiptDocument(detection, opts = {}) {
     const base = window.location.origin;
     const { date, time } = this._fmtDetectionDate(detection.created_at);
     const confPct = typeof detection.confidence === 'number'
       ? Math.round((detection.confidence > 1 ? detection.confidence : detection.confidence * 100))
       : detection.confidence;
+    const heightMm = opts.heightMm || THERMAL_FORMATS.LONG.height;
 
-    const debug = this._debugBlock('thermal', 'thermal-debug', opts.debug ? { debug: true, selectedHeight: 'auto (content-sized)' } : null);
+    const debug = this._debugBlock('thermal', 'thermal-debug', opts.debug ? {
+      debug: true,
+      selectedHeight: opts.heightMm ? `${opts.heightMm}mm (auto, content-sized)` : 'auto (measuring…)'
+    } : null);
 
     return `<!doctype html>
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Detection Receipt #${this._escape(detection.id)}</title>
 <link rel="stylesheet" href="${base}/css/thermal-print.css">
-<style id="thermalPageSize" data-auto-height="1">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${THERMAL_FORMATS.LONG.height}mm; margin: 0; }</style>
+<style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${heightMm}mm; margin: 0; }</style>
 ${this._criticalThermalStyle()}
 </head><body>
 ${debug}
@@ -341,24 +358,50 @@ ${debug}
   // width (`@page { size: 80mm auto }` is invalid and silently falls back
   // to the browser/driver's default page size — verified directly: it
   // produces a Letter-sized page, not an 80mm-wide one). So a single
-  // Detection Receipt's height is measured from its own rendered content
-  // and written into @page as a concrete mm value, right before printing.
+  // Detection Receipt's height is measured from its own rendered content,
+  // in a hidden, off-screen iframe, BEFORE the real print document is ever
+  // created — see buildThermalReceiptDocument's opts.heightMm.
   _pxToMm(px) {
     return px / 96 * 25.4; // CSS spec: 96px == 1in == 25.4mm, always
   },
 
-  _finalizeAutoPageSize(win) {
-    const styleEl = win.document.getElementById('thermalPageSize');
-    if (!styleEl || styleEl.dataset.autoHeight !== '1') return;
-    const el = win.document.querySelector('.thermal-receipt');
-    if (!el) return;
-    const heightMm = Math.ceil(this._pxToMm(el.getBoundingClientRect().height)) + 3; // small safety margin
-    styleEl.textContent = `@page { size: ${PRINTER_CONFIG.paperWidth}mm ${heightMm}mm; margin: 0; }`;
+  measureThermalReceiptHeightMm(detection, opts = {}) {
+    return new Promise((resolve) => {
+      const probeHtml = this.buildThermalReceiptDocument(detection, opts);
+      const iframe = document.createElement('iframe');
+      iframe.setAttribute('aria-hidden', 'true');
+      iframe.style.cssText = 'position:fixed; top:0; left:-99999px; width:80mm; height:50px; border:0; visibility:hidden;';
+      // srcdoc MUST be set before the iframe is inserted into the DOM. An
+      // iframe with no src/srcdoc yet starts loading about:blank the moment
+      // it's attached, which fires its OWN 'load' event — a listener added
+      // after insertion (or a 'once' listener added before but racing that
+      // first navigation) can catch that empty about:blank load instead of
+      // the real srcdoc content, resolving with an empty document and
+      // silently falling through to the LONG-format fallback height.
+      // Confirmed directly: body.innerHTML was "" when this happened.
+      iframe.srcdoc = probeHtml;
+
+      const cleanupAndResolve = (heightMm) => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        resolve(heightMm);
+      };
+
+      iframe.addEventListener('load', () => {
+        try {
+          const el = iframe.contentDocument.querySelector('.thermal-receipt');
+          const heightMm = el ? Math.ceil(this._pxToMm(el.getBoundingClientRect().height)) + 3 : THERMAL_FORMATS.LONG.height;
+          cleanupAndResolve(heightMm);
+        } catch (e) {
+          cleanupAndResolve(THERMAL_FORMATS.LONG.height); // fail-safe: never blocks printing
+        }
+      }, { once: true });
+
+      document.body.appendChild(iframe);
+    });
   },
 
   _printWindow(win) {
     const doPrint = () => {
-      this._finalizeAutoPageSize(win);
       win.focus();
       win.print();
     };
@@ -384,8 +427,9 @@ ${debug}
     return win;
   },
 
-  printThermalReceipt(detection) {
-    const win = this._openPrintWindow(this.buildThermalReceiptDocument(detection));
+  async printThermalReceipt(detection) {
+    const heightMm = await this.measureThermalReceiptHeightMm(detection);
+    const win = this._openPrintWindow(this.buildThermalReceiptDocument(detection, { heightMm }));
     this._printWindow(win);
     return win;
   }
