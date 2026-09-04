@@ -1,0 +1,145 @@
+/**
+ * VisionaryAI A4 Print Stylesheet
+ *
+ * Used ONLY by the standalone document js/thermal-print.js opens in a new
+ * window for A4 printing/preview/Save-as-PDF of the Inventory & Product
+ * Exit Report. Completely separate from css/thermal-print.css — this file
+ * is never used for POS-80C thermal output, and thermal-print.css is never
+ * used here.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+@page {
+  size: A4;
+  margin: 18mm 16mm;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif;
+}
+
+.a4-report {
+  width: 100%;
+  max-width: 178mm; /* 210mm - 16mm*2 margins, matches @page above */
+  margin: 0 auto;
+}
+
+.a4-header .brand {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.a4-header .subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.a4-meta {
+  font-size: 11px;
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+.a4-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 18px 0 8px;
+}
+
+.a4-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+.a4-stat-card {
+  background: #0369A1;
+  color: #FFFFFF;
+  border-radius: 6px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.a4-stat-card .stat-label {
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.a4-stat-card .stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.a4-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.a4-table th,
+.a4-table td {
+  padding: 6px 8px;
+  text-align: right;
+  border: 1px solid #E2E8F0;
+}
+
+.a4-table th:first-child,
+.a4-table td:first-child {
+  text-align: left;
+}
+
+.a4-table thead th {
+  background: #0284C7;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.a4-table tfoot td {
+  background: #F8FAFC;
+  font-weight: 700;
+}
+
+.a4-note {
+  font-size: 11px;
+  color: #334155;
+  margin: 6px 0;
+}
+
+.a4-footer {
+  margin-top: 24px;
+  padding-top: 8px;
+  border-top: 1px solid #E2E8F0;
+  font-size: 9px;
+  color: #64748B;
+  display: flex;
+  justify-content: space-between;
+}
+
+.a4-debug {
+  font-size: 9px;
+  border: 1px dashed #94A3B8;
+  padding: 6px 8px;
+  margin-bottom: 12px;
+  color: #475569;
+  white-space: pre-wrap;
+}
+
+@media print {
+  .a4-debug {
+    display: none;
+  }
+}

@@ -105,6 +105,20 @@ const HistoryModule = {
         if (e.target === modal) modal.classList.add('hidden');
       });
     }
+
+    // Rows are re-rendered on every loadHistory() call, so one delegated
+    // listener on the tbody (rather than per-row) survives that.
+    const tbody = document.getElementById('historyTbody');
+    if (tbody) {
+      tbody.addEventListener('click', (e) => {
+        const btn = e.target.closest('.hist-print-btn');
+        if (!btn) return;
+        const det = (this._detectionsById || {})[btn.dataset.detId];
+        if (det && typeof PrintDialog !== 'undefined') {
+          PrintDialog.openForReceipt(det);
+        }
+      });
+    }
   },
 
   formatDate(dateStr) {
@@ -136,7 +150,7 @@ const HistoryModule = {
     this._isLoading = true;
 
     if (typeof renderSkeletonRows === 'function') {
-      renderSkeletonRows(tbody, 6, this.pageSize > 8 ? 8 : this.pageSize);
+      renderSkeletonRows(tbody, 7, this.pageSize > 8 ? 8 : this.pageSize);
     }
 
     try {
@@ -169,7 +183,7 @@ const HistoryModule = {
       this.renderPageNumbers(totalPages);
 
       if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="padding: 0;"></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="padding: 0;"></td></tr>`;
         if (typeof renderEmptyState === 'function') {
           renderEmptyState(tbody.querySelector('td'), {
             icon: 'inbox',
@@ -179,6 +193,9 @@ const HistoryModule = {
         }
         return;
       }
+
+      this._detectionsById = this._detectionsById || {};
+      items.forEach(det => { this._detectionsById[det.id] = det; });
 
       tbody.innerHTML = items.map((det, i) => {
         const pClass = det.product_name.toLowerCase();
@@ -195,6 +212,7 @@ const HistoryModule = {
             <td><span class="health-pill online" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;"><span class="status-dot"></span> ${sourceLabel}</span></td>
             <td style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-title);">${dateFormatted}</td>
             <td style="font-family: var(--font-mono); font-size: 0.85rem; color: #0284C7; font-weight: 600;">${timeFormatted}</td>
+            <td><button type="button" class="btn-ctrl hist-print-btn" data-det-id="${det.id}" style="padding: 0.3rem 0.6rem; font-size: 0.72rem;">Print</button></td>
           </tr>
         `;
       }).join('');
@@ -202,7 +220,7 @@ const HistoryModule = {
     } catch (err) {
       console.error('Failed to load history:', err);
       if (typeof renderEmptyState === 'function') {
-        tbody.innerHTML = `<tr><td colspan="6" style="padding: 0;"></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="padding: 0;"></td></tr>`;
         renderEmptyState(tbody.querySelector('td'), {
           icon: 'inbox',
           title: 'Unable to load history',

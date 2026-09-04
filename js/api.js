@@ -242,12 +242,12 @@ const Api = {
   },
 
   async getInventory() {
-    try {
-      const data = await this.request('/inventory');
-      return (data && data.inventory) ? data.inventory : [];
-    } catch (e) {
-      return [];
-    }
+    // Deliberately does NOT swallow errors into an empty array — a failed
+    // request (backend down, stale/pre-inventory backend, network error)
+    // must surface as an error to the caller, not look identical to a
+    // genuinely empty inventory table.
+    const data = await this.request('/inventory');
+    return (data && data.inventory) ? data.inventory : [];
   },
 
   async updateInventory(productName, stockQuantity) {

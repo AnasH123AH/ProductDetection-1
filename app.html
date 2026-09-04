@@ -340,32 +340,21 @@
                 Generates a real inventory &amp; product exit PDF report for the selected period, from the current database. Not demo data.
               </p>
               <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: flex-end;">
-                <div>
-                  <label class="form-label" for="reportPeriodSelect">Period</label>
-                  <select id="reportPeriodSelect" class="filter-select" style="margin-top: 0.35rem;">
-                    <option value="last_3_days">Last 3 Days</option>
-                    <option value="last_7_days" selected>Last 7 Days</option>
-                    <option value="last_30_days">Last 30 Days</option>
-                    <option value="this_month">This Month</option>
-                    <option value="last_month">Last Month</option>
-                    <option value="this_year">This Year</option>
-                    <option value="last_year">Last Year</option>
-                    <option value="custom">Custom Range</option>
-                  </select>
-                </div>
-                <div id="reportCustomRangeStart" style="display: none;">
+                <div class="report-date-field">
                   <label class="form-label" for="reportStartDate">Start Date</label>
-                  <input type="date" id="reportStartDate" class="filter-input" style="margin-top: 0.35rem;">
+                  <input type="date" id="reportStartDate" class="filter-input" placeholder="YYYY-MM-DD" style="margin-top: 0.35rem;">
                 </div>
-                <div id="reportCustomRangeEnd" style="display: none;">
+                <div class="report-date-field">
                   <label class="form-label" for="reportEndDate">End Date</label>
-                  <input type="date" id="reportEndDate" class="filter-input" style="margin-top: 0.35rem;">
-
+                  <input type="date" id="reportEndDate" class="filter-input" placeholder="YYYY-MM-DD" style="margin-top: 0.35rem;">
                 </div>
+                <button type="button" id="reportPrintBtn" class="btn-ctrl">Print</button>
                 <button type="button" id="reportExportBtn" class="btn-ctrl primary">Export PDF</button>
               </div>
-              <div id="reportPreview" style="display: none; margin-top: var(--space-5);"></div>
-
+              <div id="reportDateError" style="display: none; margin-top: var(--space-2); font-size: var(--text-xs); color: var(--color-rose);"></div>
+              <div id="reportPreview" style="margin-top: var(--space-5);">
+                <div style="text-align: center; padding: var(--space-6); color: var(--text-muted);">Loading report…</div>
+              </div>
             </div>
           </div>
 
@@ -557,10 +546,11 @@
                     <th>Source</th>
                     <th>Date</th>
                     <th>Time</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="historyTbody">
-                  <tr><td colspan="6" style="text-align: center; padding: var(--space-12); color: var(--text-muted);">Loading history records...</td></tr>
+                  <tr><td colspan="7" style="text-align: center; padding: var(--space-12); color: var(--text-muted);">Loading history records...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -886,9 +876,9 @@
                     <div>
                       <label class="form-label">Resolution</label>
                       <select class="filter-select" id="settingResolution" style="width: 100%; margin-top: 0.35rem;">
-                        <option value="1280x720">1280 Ã— 720</option>
-                        <option value="640x480">640 Ã— 480</option>
-                        <option value="1920x1080">1920 Ã— 1080</option>
+                        <option value="1280x720">1280 × 720</option>
+                        <option value="640x480">640 × 480</option>
+                        <option value="1920x1080">1920 × 1080</option>
                       </select>
                     </div>
 
@@ -907,9 +897,9 @@
                       <label class="form-label" style="font-size: 0.72rem;">Camera Orientation</label>
                       <select class="filter-select" id="settingCameraOrientation" style="width: 100%; margin-top: 0.35rem; font-size: 0.78rem;">
                         <option value="Normal">Normal</option>
-                        <option value="90deg">90Â°</option>
-                        <option value="180deg">180Â°</option>
-                        <option value="270deg">270Â°</option>
+                        <option value="90deg">90°</option>
+                        <option value="180deg">180°</option>
+                        <option value="270deg">270°</option>
                       </select>
                     </div>
 
@@ -960,7 +950,7 @@
                 Sets a product's stock to a fresh baseline (both current and initial stock). This is the only way stock changes outside of a confirmed Live Detection exit event.
               </p>
               <div id="inventoryManageList">
-                <div style="text-align: center; padding: var(--space-6); color: var(--text-muted);">Loading inventoryâ€¦</div>
+                <div style="text-align: center; padding: var(--space-6); color: var(--text-muted);">Loading inventory…</div>
               </div>
             </div>
           </div>
@@ -1224,6 +1214,56 @@
     </div>
   </div>
 
+  <!-- Print Dialog: A4/PDF vs Thermal POS-80C, shared by Export Report and
+       Detection History's per-record receipt printing (js/print-dialog.js) -->
+  <div class="modal-backdrop hidden" id="printDialog" role="dialog" aria-modal="true" aria-labelledby="printDialogTitle">
+    <div class="modal-card-lg" style="max-width: 760px;">
+      <div class="modal-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--light-border); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 id="printDialogTitle" style="font-size: 1.1rem; font-weight: 700; color: var(--text-title);">Print</h3>
+          <p id="printDialogSubtitle" style="font-size: 0.8rem; color: #64748B;">Choose a printer type and paper size, then preview or print.</p>
+        </div>
+        <button type="button" class="btn-ctrl print-dialog-close-btn" id="printDialogCloseBtn" style="padding: 0.4rem 0.75rem;">&times; Close</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div id="printerTypeSection" style="margin-bottom: var(--space-4);">
+          <label class="form-label">Printer Type</label>
+          <div class="print-radio-row">
+            <label class="print-radio-option">
+              <input type="radio" name="printerType" value="a4" checked> A4 / PDF
+            </label>
+            <label class="print-radio-option">
+              <input type="radio" name="printerType" value="thermal"> Thermal POS-80C
+            </label>
+          </div>
+        </div>
+
+        <div id="paperSizeSection" style="margin-bottom: var(--space-4); display: none;">
+          <label class="form-label">Paper Size</label>
+          <div class="print-radio-row" id="paperSizeRadios"></div>
+          <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-2);">
+            Physical paper width: <strong>80 mm</strong> &middot; Printable width: <strong id="printPrintableWidth">72.1 mm</strong>
+          </div>
+        </div>
+
+        <label style="display: flex; align-items: center; gap: 0.4rem; font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-3); cursor: pointer;">
+          <input type="checkbox" id="printDebugToggle"> Show debug info
+        </label>
+        <div id="printDebugPanel" class="print-debug-panel" hidden></div>
+
+        <div id="printPreviewWrap" class="print-preview-wrap">
+          <iframe id="printPreviewFrame" class="print-preview-frame" title="Print preview"></iframe>
+        </div>
+      </div>
+
+      <div class="modal-header" style="padding: 1rem 1.5rem; border-top: 1px solid var(--light-border); border-bottom: none; justify-content: flex-end; gap: var(--space-3);">
+        <button type="button" class="btn-ctrl print-dialog-secondary-btn" id="printDialogPreviewBtn">Preview</button>
+        <button type="button" class="btn-ctrl primary" id="printDialogPrintBtn">Print</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Global Toast Notification Container -->
   <div class="toast-container" id="toastContainer" aria-live="assertive"></div>
 
@@ -1262,6 +1302,9 @@
   <script src="js/ui.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/printer-config.js"></script>
+  <script src="js/thermal-print.js"></script>
+  <script src="js/print-dialog.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/live-detect.js"></script>
   <script src="js/history.js"></script>

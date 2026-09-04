@@ -1,0 +1,181 @@
+/**
+ * VisionaryAI Thermal (POS-80C) Print Stylesheet
+ *
+ * Used ONLY by the standalone documents js/thermal-print.js opens in a new
+ * window for thermal printing/preview. Never linked into app.html, and
+ * never shared with css/a4-print.css — the physical constraints are
+ * different (80mm roll, 72.1mm printable width, no fixed page height for
+ * the LONG format) and mixing them risks silently reintroducing A4 sizing.
+ *
+ * Paper width vs printable width: the POS-80C's roll is 80mm wide, but only
+ * 72.1mm of that is actually printable. The @page size below intentionally
+ * stays at the full 80mm (matching the physical roll the driver expects),
+ * while .thermal-receipt is capped at 72.1mm so real content never runs
+ * into the unprintable margin. The document's own @page height (mm) is
+ * injected at print time by js/thermal-print.js, since it depends on which
+ * of the three supported lengths (or "auto", for a single receipt) was
+ * selected — that single value is NOT duplicated here.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 80mm;
+  background: #FFFFFF;
+  font-family: 'Courier New', 'JetBrains Mono', monospace;
+  color: #0F172A;
+}
+
+.thermal-receipt {
+  width: 72.1mm;
+  max-width: 72.1mm;
+  margin: 0 auto;
+  padding: 2mm 0;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.thermal-receipt * {
+  max-width: 100%;
+}
+
+.thermal-header {
+  text-align: center;
+  margin-bottom: 2mm;
+}
+
+.thermal-header .brand {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.thermal-header .subtitle {
+  font-size: 8px;
+  margin-top: 0.5mm;
+}
+
+.thermal-meta {
+  font-size: 8px;
+  margin-bottom: 2mm;
+}
+
+.thermal-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+}
+
+.thermal-meta .meta-label {
+  flex-shrink: 0;
+}
+
+.thermal-meta .meta-value {
+  text-align: right;
+  word-break: break-word;
+}
+
+.thermal-divider {
+  border: none;
+  border-top: 1px dashed #0F172A;
+  margin: 1.5mm 0;
+}
+
+.thermal-section-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 1mm;
+}
+
+.thermal-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 8px;
+}
+
+.thermal-table th,
+.thermal-table td {
+  padding: 0.6mm 0.5mm;
+  text-align: right;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.thermal-table th:first-child,
+.thermal-table td:first-child {
+  text-align: left;
+}
+
+.thermal-table thead th {
+  border-bottom: 1px solid #0F172A;
+  font-weight: 700;
+}
+
+.thermal-table tfoot td {
+  border-top: 1px solid #0F172A;
+  font-weight: 700;
+}
+
+.thermal-summary {
+  margin: 2mm 0;
+}
+
+.thermal-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.5px;
+  padding: 0.4mm 0;
+}
+
+.thermal-summary-row .label {
+  color: #334155;
+}
+
+.thermal-summary-row .value {
+  font-weight: 700;
+}
+
+.thermal-note {
+  font-size: 7.5px;
+  text-align: center;
+  margin-top: 1.5mm;
+  color: #334155;
+}
+
+.thermal-footer {
+  text-align: center;
+  font-size: 7.5px;
+  margin-top: 3mm;
+  color: #334155;
+}
+
+.thermal-debug {
+  font-size: 7px;
+  border: 1px dashed #94A3B8;
+  padding: 1mm;
+  margin-bottom: 2mm;
+  color: #475569;
+  white-space: pre-wrap;
+}
+
+@media print {
+  html, body {
+    width: 80mm;
+  }
+
+  .thermal-debug {
+    display: none;
+  }
+
+  /* No page-break rules anywhere in this stylesheet on purpose — the
+     LONG (3276mm) format must print as one continuous receipt, and the
+     fixed lengths (210mm/297mm) rely on their @page height + min-height,
+     never a forced page-break-after. */
+}

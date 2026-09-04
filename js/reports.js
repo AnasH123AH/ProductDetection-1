@@ -1,26 +1,21 @@
 /**
  * VisionaryAI Inventory & Product Exit Report
- * Dashboard "Export Report" card: period selection -> real backend-generated
- * PDF (GET /api/reports/inventory/pdf) built from the live database, plus an
- * optional inline JSON preview (GET /api/reports/inventory).
  * Dashboard "Export Report" card: pick a Start/End date range. The preview
  * (summary cards + tables) loads automatically from the real database
- * whenever the range changes â€” there is no separate "Generate" step, only
+ * whenever the range changes — there is no separate "Generate" step, only
  * Export PDF as an explicit action (GET /api/reports/inventory/pdf).
  */
 
 const ReportsModule = {
   init() {
-    const periodSelect = document.getElementById('reportPeriodSelect');
-    const startWrap = document.getElementById('reportCustomRangeStart');
-    const endWrap = document.getElementById('reportCustomRangeEnd');
     const startInput = document.getElementById('reportStartDate');
     const endInput = document.getElementById('reportEndDate');
     const exportBtn = document.getElementById('reportExportBtn');
+    const printBtn = document.getElementById('reportPrintBtn');
     const preview = document.getElementById('reportPreview');
     const dateError = document.getElementById('reportDateError');
 
-    if (!startInput || !endInput || !exportBtn || !periodSelect) return;
+    if (!startInput || !endInput || !exportBtn) return;
 
     const today = new Date().toISOString().slice(0, 10);
     const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
@@ -29,51 +24,46 @@ const ReportsModule = {
     endInput.max = today;
     startInput.max = today;
 
-    const syncCustomVisibility = () => {
-      const isCustom = periodSelect.value === 'custom';
-      if (startWrap) startWrap.style.display = isCustom ? 'block' : 'none';
-      if (endWrap) endWrap.style.display = isCustom ? 'block' : 'none';
-    };
-
     const validateRange = () => {
-      const isCustom = periodSelect.value === 'custom';
-      if (!isCustom) {
-        if (dateError) { dateError.style.display = 'none'; dateError.textContent = ''; }
-        startInput.classList.remove('report-date-invalid');
-        endInput.classList.remove('report-date-invalid');
-        exportBtn.disabled = false;
-        return true;
-      }
       const start = startInput.value;
       const end = endInput.value;
       let message = null;
-      if (!start || !end) message = 'Both a Start Date and an End Date are required.';
-      else if (end < start) message = 'The End Date cannot be before the Start Date.';
+
+      if (!start || !end) {
+        message = 'Both a Start Date and an End Date are required.';
+      } else if (end < start) {
+        message = 'The End Date cannot be before the Start Date.';
+      }
+
       const invalid = !!message;
       startInput.classList.toggle('report-date-invalid', invalid);
       endInput.classList.toggle('report-date-invalid', invalid);
-      if (dateError) { dateError.style.display = invalid ? 'block' : 'none'; dateError.textContent = message || ''; }
+      dateError.style.display = invalid ? 'block' : 'none';
+      dateError.textContent = message || '';
       exportBtn.disabled = invalid;
       return !invalid;
     };
 
-    const currentParams = () => {
-      const period = periodSelect.value;
-      if (period === 'custom') return { period, start: startInput.value, end: endInput.value };
-      return { period };
-    };
+    const currentParams = () => ({ period: 'custom', start: startInput.value, end: endInput.value });
 
     const refresh = () => {
       if (validateRange()) this.refreshPreview(currentParams(), preview);
     };
 
-    periodSelect.addEventListener('change', () => { syncCustomVisibility(); refresh(); });
     startInput.addEventListener('change', refresh);
     endInput.addEventListener('change', refresh);
-    exportBtn.addEventListener('click', () => { if (validateRange()) this.exportPdf(currentParams(), exportBtn); });
+    exportBtn.addEventListener('click', () => {
+      if (validateRange()) this.exportPdf(currentParams(), exportBtn);
+    });
+    if (printBtn) {
+      printBtn.addEventListener('click', () => {
+        if (validateRange() && typeof PrintDialog !== 'undefined') {
+          PrintDialog.openForReport(currentParams);
+        }
+      });
+    }
 
-    syncCustomVisibility();
-    refresh();
+    refresh(); // load the default range's report immediately, no click needed
   },
 
   async refreshPreview(params, preview) {
@@ -90,7 +80,7 @@ const ReportsModule = {
     if (btn.disabled) return;
     btn.disabled = true;
     const original = btn.textContent;
-    btn.textContent = 'Exportingâ€¦';
+    btn.textContent = 'Exporting…';
 
     try {
       const blob = await Api.getReportPdfBlob(params);
@@ -141,7 +131,7 @@ const ReportsModule = {
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5);">
           ${this._statCard('Total Products Exited', s.total_exited)}
           ${this._statCard('Current Total Stock', s.total_current_stock)}
-          ${this._statCard('Most Exited Product', s.most_exited_product || 'â€”')}
+          ${this._statCard('Most Exited Product', s.most_exited_product || '—')}
           ${this._statCard('Average Daily Exits', s.avg_daily_exits)}
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);">

@@ -292,6 +292,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }).join('');
     } catch (e) {
       console.warn('Inventory poll failed', e);
+      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: var(--space-8); color: var(--color-rose);">Unable to load inventory. Check the backend connection.</div>`;
     }
   }
 
