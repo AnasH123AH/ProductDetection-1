@@ -26,6 +26,30 @@
  */
 
 const PrintEngine = {
+  // css/a4-print.css and css/thermal-print.css are fetched once, well ahead
+  // of any actual print action (right when this module loads), and cached
+  // here as raw text. Every generated print document then embeds that text
+  // directly in an inline <style> tag instead of a <link rel="stylesheet">
+  // — removing any dependency on a network/cache round-trip completing
+  // between opening the print popup and calling window.print(). If the
+  // prefetch hasn't finished yet (e.g. print clicked within the first
+  // instant after page load) or failed, a <link> is used as a fallback, so
+  // this can never leave a document completely unstyled.
+  _cssCache: {},
+
+  _prefetchCss(name, path) {
+    fetch(`${window.location.origin}${path}`)
+      .then(r => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then(text => { this._cssCache[name] = text; })
+      .catch(() => {}); // silent — the <link> fallback covers this
+  },
+
+  _stylesheetTag(name, path) {
+    const cached = this._cssCache[name];
+    if (cached) return `<style>${cached}</style>`;
+    return `<link rel="stylesheet" href="${window.location.origin}${path}">`;
+  },
+
   _escape(str) {
     const div = document.createElement('div');
     div.textContent = str === null || str === undefined ? '' : String(str);
@@ -84,7 +108,6 @@ const PrintEngine = {
 
   buildA4ReportDocument(report, opts = {}) {
     const s = report.summary;
-    const base = window.location.origin;
 
     const inventoryRows = report.inventory_table.map(r => `
       <tr>
@@ -125,7 +148,7 @@ const PrintEngine = {
     return `<!doctype html>
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Inventory Report — ${this._escape(report.start_date)} to ${this._escape(report.end_date)}</title>
-<link rel="stylesheet" href="${base}/css/a4-print.css">
+${this._stylesheetTag('a4', '/css/a4-print.css')}
 ${this._criticalA4Style()}
 </head><body>
 <div class="a4-report">
@@ -179,7 +202,6 @@ ${this._criticalA4Style()}
     const format = getThermalFormatByKey(formatKey);
     if (!format) throw new Error(`Unknown thermal format: ${formatKey}`);
     const s = report.summary;
-    const base = window.location.origin;
 
     const inventoryRows = report.inventory_table.map(r => `
       <tr><td>${this._escape(r.product_name)}</td><td>${r.current_stock}</td><td>${r.initial_stock}</td><td>${r.exited_in_period}</td></tr>`).join('');
@@ -189,7 +211,7 @@ ${this._criticalA4Style()}
     return `<!doctype html>
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Thermal Report — ${this._escape(report.start_date)} to ${this._escape(report.end_date)}</title>
-<link rel="stylesheet" href="${base}/css/thermal-print.css">
+${this._stylesheetTag('thermal', '/css/thermal-print.css')}
 <style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${format.height}mm; margin: 0; }</style>
 ${this._criticalThermalStyle()}
 </head><body>
@@ -252,7 +274,6 @@ ${this._criticalThermalStyle()}
   // copy away and never prints or previews it), a generous placeholder is
   // used so the measurement pass itself never clips.
   buildThermalReceiptDocument(detection, opts = {}) {
-    const base = window.location.origin;
     const { date, time } = this._fmtDetectionDate(detection.created_at);
     const confPct = typeof detection.confidence === 'number'
       ? Math.round((detection.confidence > 1 ? detection.confidence : detection.confidence * 100))
@@ -262,7 +283,7 @@ ${this._criticalThermalStyle()}
     return `<!doctype html>
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Detection Receipt #${this._escape(detection.id)}</title>
-<link rel="stylesheet" href="${base}/css/thermal-print.css">
+${this._stylesheetTag('thermal', '/css/thermal-print.css')}
 <style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${heightMm}mm; margin: 0; }</style>
 ${this._criticalThermalStyle()}
 </head><body>
@@ -419,3 +440,10 @@ ${this._criticalThermalStyle()}
     return win;
   }
 };
+
+// Kick off both prefetches immediately as this module loads (i.e. when
+// app.html loads) — by the time a user actually opens the print dialog,
+// seconds or minutes later, the CSS text is already cached and every
+// generated document embeds it directly instead of a <link>.
+PrintEngine._prefetchCss('a4', '/css/a4-print.css');
+PrintEngine._prefetchCss('thermal', '/css/thermal-print.css');
