@@ -25,15 +25,14 @@ const PrintDialog = {
     const previewBtn = document.getElementById('printDialogPreviewBtn');
     const printBtn = document.getElementById('printDialogPrintBtn');
     const debugToggle = document.getElementById('printDebugToggle');
-    const paperSizeRadios = document.getElementById('paperSizeRadios');
+    const paperSizeSelect = document.getElementById('paperSizeSelect');
 
     if (!dialog) return;
 
-    paperSizeRadios.innerHTML = Object.values(THERMAL_FORMATS).map(f => `
-      <label class="print-radio-option">
-        <input type="radio" name="thermalPaperSize" value="${f.key}" ${f.key === this._thermalFormatKey ? 'checked' : ''}>
-        ${this._escape(f.label)}
-      </label>
+    // A dropdown shows only the currently selected paper size — the other
+    // two options exist but aren't visible at once, unlike a radio row.
+    paperSizeSelect.innerHTML = Object.values(THERMAL_FORMATS).map(f => `
+      <option value="${f.key}" ${f.key === this._thermalFormatKey ? 'selected' : ''}>${this._escape(f.label)}</option>
     `).join('');
 
     document.querySelectorAll('input[name="printerType"]').forEach(radio => {
@@ -42,11 +41,9 @@ const PrintDialog = {
         this.refreshPreview();
       });
     });
-    paperSizeRadios.addEventListener('change', (e) => {
-      if (e.target.name === 'thermalPaperSize') {
-        this._thermalFormatKey = e.target.value;
-        this.refreshPreview();
-      }
+    paperSizeSelect.addEventListener('change', () => {
+      this._thermalFormatKey = paperSizeSelect.value;
+      this.refreshPreview();
     });
 
     if (debugToggle) {
