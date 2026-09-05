@@ -87,11 +87,15 @@ html, body {
 
 .thermal-meta .meta-label {
   flex-shrink: 0;
+  color: #000000;
+  font-weight: 700;
 }
 
 .thermal-meta .meta-value {
   text-align: right;
   word-break: break-word;
+  color: #000000;
+  font-weight: 700;
 }
 
 /* Single Detection Receipt fields — stacked label-then-value, like a real
