@@ -384,10 +384,19 @@ ${this._criticalThermalStyle()}
     // Wait for the linked stylesheet to actually apply before printing —
     // printing too early can hand the browser an unstyled (or A4-default)
     // page, which is exactly the failure mode this feature exists to avoid.
+    // Two nested requestAnimationFrame calls guarantee at least one full
+    // style-recalc + layout + paint cycle has actually completed (a fixed
+    // setTimeout alone doesn't guarantee that on a slower machine), plus a
+    // small extra buffer on top for real-world safety margin.
+    const waitForPaintThenPrint = () => {
+      win.requestAnimationFrame(() => {
+        win.requestAnimationFrame(() => setTimeout(doPrint, 150));
+      });
+    };
     if (win.document.readyState === 'complete') {
-      setTimeout(doPrint, 150);
+      waitForPaintThenPrint();
     } else {
-      win.addEventListener('load', () => setTimeout(doPrint, 150));
+      win.addEventListener('load', waitForPaintThenPrint);
     }
   },
 
