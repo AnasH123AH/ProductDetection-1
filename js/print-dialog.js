@@ -114,13 +114,14 @@ const PrintDialog = {
       let html, widthMm, heightMm;
 
       if (this._mode === 'receipt') {
-        // Same measurement PrintEngine.printThermalReceipt() uses for the
-        // real print, so the preview's height is never a guess that could
-        // drift from what actually prints.
-        const measuredHeightMm = await PrintEngine.measureThermalReceiptHeightMm(this._detection);
-        html = PrintEngine.buildThermalReceiptDocument(this._detection, { heightMm: measuredHeightMm });
-        widthMm = PRINTER_CONFIG.printableWidth;
-        heightMm = measuredHeightMm;
+        // Exact same render PrintEngine.printThermalReceipt() uses for the
+        // real print (same canvas PNG, same document builder), so the
+        // preview is never an approximation that could drift from what
+        // actually prints.
+        const rendered = PrintEngine.renderThermalReceiptImage(this._detection);
+        html = PrintEngine.buildThermalReceiptImageDocument(rendered.dataUrl, rendered.widthMm, rendered.heightMm);
+        widthMm = rendered.widthMm;
+        heightMm = rendered.heightMm;
       } else if (this._isThermal()) {
         const format = getThermalFormatByKey(this._thermalFormatKey);
         const report = await this._currentReportData();

@@ -258,81 +258,256 @@ ${this._criticalThermalStyle()}
 
   // -------------------------------------------------------------------
   // Thermal — single Detection History record (compact receipt)
+  //
+  // Rendered as a single pre-composed <canvas> PNG rather than reflowable
+  // HTML/CSS. Root cause of the persistent blank gap above the receipt in
+  // real-world printing: window.print()'s CSS/@page pipeline was measured
+  // and found correct in every reproducible test here (real Print-button
+  // clicks, page.pdf() with displayHeaderFooter matching the user's own
+  // screenshots, file:// loads with the network fully blocked) — the gap
+  // never appeared in any of those. That points at the OS-level printer
+  // driver's own HTML/CSS layout pass (a different pipeline than Chrome's
+  // PDF engine, and one this sandbox cannot access or reproduce) silently
+  // reinterpreting the flex/box layout and inserting space before content.
+  // A driver can reinterpret text+CSS; it cannot reinterpret a bitmap. So
+  // the receipt is fully measured and drawn once, client-side, into a
+  // <canvas>, exported as a PNG data URL, and the print document that
+  // actually reaches the driver contains nothing but that single <img> at
+  // its exact physical size — there is no layout left for any driver to
+  // get wrong. See renderThermalReceiptImage() below for the drawing code
+  // and buildThermalReceiptImageDocument() for the minimal print document.
   // -------------------------------------------------------------------
 
-  // opts.heightMm is the receipt's real content height, already measured by
-  // measureThermalReceiptHeightMm() — @page is written with that concrete
-  // value from the very first paint. There is no placeholder-then-patch
-  // step for the copy that actually gets printed: window.print()'s own
-  // preview/print pipeline was found to sometimes snapshot @page before an
-  // async DOM mutation lands (verified against a real printed receipt that
-  // showed a large blank gap at the top, consistent with the browser having
-  // used a stale/placeholder page height for layout). Measuring first and
-  // writing once removes that race entirely rather than tuning timeouts
-  // around it. If heightMm is omitted (used internally by
-  // measureThermalReceiptHeightMm's own measurement pass, which throws this
-  // copy away and never prints or previews it), a generous placeholder is
-  // used so the measurement pass itself never clips.
-  buildThermalReceiptDocument(detection, opts = {}) {
+  // Px-per-mm at the CSS-spec-fixed 96px = 1in = 25.4mm ratio (DPI-independent).
+  _MM_PX: 96 / 25.4,
+
+  // Vertical center of a text line within its CSS line-box, expressed as a
+  // fillText baseline offset from the line's top — mirrors how a browser
+  // centers a font's glyphs within `line-height` (half-leading), using a
+  // fixed 0.8 cap-height ratio (accurate enough for the monospace fallback
+  // stack used here; exactness isn't required, only visual fidelity).
+  _baselineY(y, lineHeightPx, fontSizePx) {
+    return y + (lineHeightPx - fontSizePx) / 2 + fontSizePx * 0.8;
+  },
+
+  // Wraps text to fit maxWidthPx using ctx's currently-set font, mirroring
+  // CSS `overflow-wrap: break-word` / `word-break: break-word`: break on
+  // spaces where possible, and fall back to a character-level split for any
+  // single word that alone still exceeds maxWidthPx (e.g. a long product or
+  // model name with no spaces).
+  _wrapText(ctx, text, maxWidthPx) {
+    const words = String(text == null ? '' : text).split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [''];
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (ctx.measureText(candidate).width <= maxWidthPx) {
+        current = candidate;
+        continue;
+      }
+      if (current) { lines.push(current); current = ''; }
+      if (ctx.measureText(word).width <= maxWidthPx) {
+        current = word;
+        continue;
+      }
+      let chunk = '';
+      for (const ch of word) {
+        const test = chunk + ch;
+        if (ctx.measureText(test).width <= maxWidthPx || !chunk) {
+          chunk = test;
+        } else {
+          lines.push(chunk);
+          chunk = ch;
+        }
+      }
+      current = chunk;
+    }
+    if (current) lines.push(current);
+    return lines.length ? lines : [''];
+  },
+
+  // Header block: brand + subtitle, centered. Metrics match
+  // css/thermal-print.css .thermal-header / .brand / .subtitle exactly.
+  _buildHeaderBlock(fontFamily) {
+    const MM = this._MM_PX;
+    const brandFS = 20, brandLH = brandFS * 1.5;
+    const subFS = 11, subLH = subFS * 1.5, subMarginTop = 1 * MM;
+    const height = brandLH + subMarginTop + subLH;
+    return {
+      marginTop: 0, marginBottom: 2.5 * MM, height,
+      draw: (ctx, left, y, width) => {
+        ctx.textAlign = 'center';
+        ctx.font = `700 ${brandFS}px ${fontFamily}`;
+        ctx.letterSpacing = `${0.06 * brandFS}px`;
+        ctx.fillText('VISIONARYAI', left + width / 2, this._baselineY(y, brandLH, brandFS));
+        ctx.font = `700 ${subFS}px ${fontFamily}`;
+        ctx.letterSpacing = '0px';
+        ctx.fillText('Product Detection', left + width / 2, this._baselineY(y + brandLH + subMarginTop, subLH, subFS));
+      }
+    };
+  },
+
+  // Dashed divider: matches .thermal-divider (1px solid-drawn-as-dashed rule, 2.5mm margin above/below).
+  _buildDividerBlock() {
+    const MM = this._MM_PX;
+    return {
+      marginTop: 2.5 * MM, marginBottom: 2.5 * MM, height: 1,
+      draw: (ctx, left, y, width) => {
+        ctx.save();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 2]);
+        ctx.beginPath();
+        ctx.moveTo(left, y + 0.5);
+        ctx.lineTo(left + width, y + 0.5);
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+  },
+
+  // Label-over-value field: matches .thermal-field / .thermal-field-label /
+  // .thermal-field-value(.secondary). Value may wrap to multiple lines.
+  _buildFieldBlock(mctx, label, value, { secondary = false, contentWidthPx, fontFamily }) {
+    const MM = this._MM_PX;
+    const labelFS = 9.5, labelLH = labelFS * 1.5;
+    const valueFS = secondary ? 11 : 15, valueLH = valueFS * 1.5;
+    const valueMarginTop = 0.5 * MM;
+    mctx.font = `700 ${valueFS}px ${fontFamily}`;
+    const lines = this._wrapText(mctx, value, contentWidthPx);
+    const height = labelLH + valueMarginTop + lines.length * valueLH;
+    return {
+      marginTop: 0, marginBottom: 2.5 * MM, height,
+      draw: (ctx, left, y, width) => {
+        ctx.textAlign = 'left';
+        ctx.font = `700 ${labelFS}px ${fontFamily}`;
+        ctx.letterSpacing = `${0.05 * labelFS}px`;
+        ctx.fillText(String(label).toUpperCase(), left, this._baselineY(y, labelLH, labelFS));
+        ctx.letterSpacing = '0px';
+        ctx.font = `700 ${valueFS}px ${fontFamily}`;
+        const valueTop = y + labelLH + valueMarginTop;
+        lines.forEach((line, i) => {
+          ctx.fillText(line, left, this._baselineY(valueTop + i * valueLH, valueLH, valueFS));
+        });
+      }
+    };
+  },
+
+  // Centered footer line: matches .thermal-footer.
+  _buildFooterBlock(text, fontFamily) {
+    const MM = this._MM_PX;
+    const fs = 11, lh = fs * 1.5;
+    return {
+      marginTop: 3.5 * MM, marginBottom: 0, height: lh,
+      draw: (ctx, left, y, width) => {
+        ctx.textAlign = 'center';
+        ctx.font = `700 ${fs}px ${fontFamily}`;
+        ctx.fillText(text, left + width / 2, this._baselineY(y, lh, fs));
+      }
+    };
+  },
+
+  _buildReceiptBlocks(detection, mctx, contentWidthPx, fontFamily) {
     const { date, time } = this._fmtDetectionDate(detection.created_at);
     const confPct = typeof detection.confidence === 'number'
       ? Math.round((detection.confidence > 1 ? detection.confidence : detection.confidence * 100))
       : detection.confidence;
-    const heightMm = opts.heightMm || THERMAL_FORMATS.LONG.height;
+    const field = (label, value, opts) => this._buildFieldBlock(mctx, label, value, { contentWidthPx, fontFamily, ...opts });
 
+    return [
+      this._buildHeaderBlock(fontFamily),
+      this._buildDividerBlock(),
+      field('Product', detection.product_name),
+      field('Confidence', `${confPct}%`),
+      field('Status', 'EXIT · Confirmed'),
+      field('Source', detection.source || 'Live Camera'),
+      field('Date', date),
+      field('Time', time),
+      this._buildDividerBlock(),
+      field('Detection ID', `#${detection.id}`, { secondary: true }),
+      field('Model', detection.model_name || '—', { secondary: true }),
+      this._buildDividerBlock(),
+      this._buildFooterBlock('Thank you', fontFamily),
+      this._buildFooterBlock(`VisionaryAI · ${PRINTER_CONFIG.printerName}`, fontFamily)
+    ];
+  },
+
+  // Measures then draws the full receipt in one synchronous pass (no async
+  // iframe round-trip, and so no race with it) and returns a ready-to-print
+  // PNG plus its exact physical size. DEVICE_SCALE renders at 4x the CSS-px
+  // grid so text stays crisp at real thermal-printer resolution; the <img>
+  // in the print document is still sized to the true mm dimensions below,
+  // so this only affects pixel density, never the physical output size.
+  renderThermalReceiptImage(detection) {
+    const MM = this._MM_PX;
+    const DEVICE_SCALE = 4;
+    const fontFamily = `'Courier New', monospace`;
+    const pageWidthMm = PRINTER_CONFIG.paperWidth;
+    const contentWidthMm = PRINTER_CONFIG.printableWidth;
+    const paddingMm = 3;
+
+    const pageWidthPx = pageWidthMm * MM;
+    const contentWidthPx = contentWidthMm * MM;
+    const contentLeftPx = (pageWidthPx - contentWidthPx) / 2;
+    const paddingPx = paddingMm * MM;
+
+    const measureCanvas = document.createElement('canvas');
+    const mctx = measureCanvas.getContext('2d');
+    const blocks = this._buildReceiptBlocks(detection, mctx, contentWidthPx, fontFamily);
+
+    let contentHeightPx = 0;
+    let prevMarginBottom = 0;
+    blocks.forEach((b, i) => {
+      contentHeightPx += (i === 0 ? 0 : Math.max(prevMarginBottom, b.marginTop)) + b.height;
+      prevMarginBottom = b.marginBottom;
+    });
+
+    const pageHeightPx = paddingPx * 2 + contentHeightPx;
+    const pageHeightMm = pageHeightPx / MM;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(pageWidthPx * DEVICE_SCALE);
+    canvas.height = Math.ceil(pageHeightPx * DEVICE_SCALE);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(DEVICE_SCALE, DEVICE_SCALE);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, pageWidthPx, pageHeightPx);
+    ctx.fillStyle = '#000000';
+    ctx.textBaseline = 'alphabetic';
+
+    let y = paddingPx;
+    prevMarginBottom = 0;
+    blocks.forEach((b, i) => {
+      if (i > 0) y += Math.max(prevMarginBottom, b.marginTop);
+      b.draw(ctx, contentLeftPx, y, contentWidthPx);
+      y += b.height;
+      prevMarginBottom = b.marginBottom;
+    });
+
+    return {
+      dataUrl: canvas.toDataURL('image/png'),
+      widthMm: pageWidthMm,
+      heightMm: pageHeightMm
+    };
+  },
+
+  // Minimal print document: nothing but the pre-rendered receipt <img> at
+  // its true physical size. No flex/grid, no fonts, no reflow — there is
+  // nothing left in this document for a printer driver's own layout pass
+  // to misinterpret.
+  buildThermalReceiptImageDocument(dataUrl, widthMm, heightMm) {
     return `<!doctype html>
 <html><head><meta charset="utf-8">
-<title>VisionaryAI Detection Receipt #${this._escape(detection.id)}</title>
-${this._stylesheetTag('thermal', '/css/thermal-print.css')}
-<style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${heightMm}mm; margin: 0; }</style>
-${this._criticalThermalStyle()}
+<title>VisionaryAI Detection Receipt</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
+  html, body { width: ${widthMm}mm; height: ${heightMm}mm; background: #FFFFFF; }
+  img { display: block; width: ${widthMm}mm; height: ${heightMm}mm; }
+</style>
 </head><body>
-<div class="thermal-receipt">
-  <div class="thermal-header">
-    <div class="brand">VISIONARYAI</div>
-    <div class="subtitle">Product Detection</div>
-  </div>
-  <hr class="thermal-divider">
-
-  <div class="thermal-field">
-    <div class="thermal-field-label">Product</div>
-    <div class="thermal-field-value">${this._escape(detection.product_name)}</div>
-  </div>
-  <div class="thermal-field">
-    <div class="thermal-field-label">Confidence</div>
-    <div class="thermal-field-value">${confPct}%</div>
-  </div>
-  <div class="thermal-field">
-    <div class="thermal-field-label">Status</div>
-    <div class="thermal-field-value">EXIT &middot; Confirmed</div>
-  </div>
-  <div class="thermal-field">
-    <div class="thermal-field-label">Source</div>
-    <div class="thermal-field-value">${this._escape(detection.source || 'Live Camera')}</div>
-  </div>
-  <div class="thermal-field">
-    <div class="thermal-field-label">Date</div>
-    <div class="thermal-field-value">${this._escape(date)}</div>
-  </div>
-  <div class="thermal-field">
-    <div class="thermal-field-label">Time</div>
-    <div class="thermal-field-value">${this._escape(time)}</div>
-  </div>
-
-  <hr class="thermal-divider">
-  <div class="thermal-field">
-    <div class="thermal-field-label">Detection ID</div>
-    <div class="thermal-field-value secondary">#${this._escape(detection.id)}</div>
-  </div>
-  <div class="thermal-field">
-    <div class="thermal-field-label">Model</div>
-    <div class="thermal-field-value secondary">${this._escape(detection.model_name || '—')}</div>
-  </div>
-
-  <hr class="thermal-divider">
-  <div class="thermal-footer">Thank you</div>
-  <div class="thermal-footer">VisionaryAI &middot; ${PRINTER_CONFIG.printerName}</div>
-</div>
+<img src="${dataUrl}" alt="VisionaryAI Detection Receipt" width="${widthMm}" height="${heightMm}">
 </body></html>`;
   },
 
@@ -349,52 +524,6 @@ ${this._criticalThermalStyle()}
     win.document.write(html);
     win.document.close();
     return win;
-  },
-
-  // CSS has no real "auto" page-length keyword usable alongside a fixed
-  // width (`@page { size: 80mm auto }` is invalid and silently falls back
-  // to the browser/driver's default page size — verified directly: it
-  // produces a Letter-sized page, not an 80mm-wide one). So a single
-  // Detection Receipt's height is measured from its own rendered content,
-  // in a hidden, off-screen iframe, BEFORE the real print document is ever
-  // created — see buildThermalReceiptDocument's opts.heightMm.
-  _pxToMm(px) {
-    return px / 96 * 25.4; // CSS spec: 96px == 1in == 25.4mm, always
-  },
-
-  measureThermalReceiptHeightMm(detection, opts = {}) {
-    return new Promise((resolve) => {
-      const probeHtml = this.buildThermalReceiptDocument(detection, opts);
-      const iframe = document.createElement('iframe');
-      iframe.setAttribute('aria-hidden', 'true');
-      iframe.style.cssText = 'position:fixed; top:0; left:-99999px; width:80mm; height:50px; border:0; visibility:hidden;';
-      // srcdoc MUST be set before the iframe is inserted into the DOM. An
-      // iframe with no src/srcdoc yet starts loading about:blank the moment
-      // it's attached, which fires its OWN 'load' event — a listener added
-      // after insertion (or a 'once' listener added before but racing that
-      // first navigation) can catch that empty about:blank load instead of
-      // the real srcdoc content, resolving with an empty document and
-      // silently falling through to the LONG-format fallback height.
-      // Confirmed directly: body.innerHTML was "" when this happened.
-      iframe.srcdoc = probeHtml;
-
-      const cleanupAndResolve = (heightMm) => {
-        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-        resolve(heightMm);
-      };
-
-      iframe.addEventListener('load', () => {
-        try {
-          const el = iframe.contentDocument.querySelector('.thermal-receipt');
-          const heightMm = el ? Math.ceil(this._pxToMm(el.getBoundingClientRect().height)) + 3 : THERMAL_FORMATS.LONG.height;
-          cleanupAndResolve(heightMm);
-        } catch (e) {
-          cleanupAndResolve(THERMAL_FORMATS.LONG.height); // fail-safe: never blocks printing
-        }
-      }, { once: true });
-
-      document.body.appendChild(iframe);
-    });
   },
 
   _printWindow(win) {
@@ -433,9 +562,9 @@ ${this._criticalThermalStyle()}
     return win;
   },
 
-  async printThermalReceipt(detection) {
-    const heightMm = await this.measureThermalReceiptHeightMm(detection);
-    const win = this._openPrintWindow(this.buildThermalReceiptDocument(detection, { heightMm }));
+  printThermalReceipt(detection) {
+    const { dataUrl, widthMm, heightMm } = this.renderThermalReceiptImage(detection);
+    const win = this._openPrintWindow(this.buildThermalReceiptImageDocument(dataUrl, widthMm, heightMm));
     this._printWindow(win);
     return win;
   }
