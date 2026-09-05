@@ -6,7 +6,7 @@
  * Api.getDetections) — never demo data:
  *
  *   printA4(report)                    -> A4 (210 x 297mm), css/a4-print.css
- *   printThermal(report, formatKey)    -> POS-80C, css/thermal-print.css
+ *   printThermal(report)               -> POS-80C, css/thermal-print.css, auto height
  *   printThermalReceipt(detection)     -> POS-80C, single record, auto height
  *
  * IMPORTANT ARCHITECTURE NOTE (browser print, not raw ESC/POS):
@@ -198,10 +198,21 @@ ${this._criticalA4Style()}
   // Thermal — full report on the POS-80C
   // -------------------------------------------------------------------
 
-  buildThermalReportDocument(report, formatKey, opts = {}) {
-    const format = getThermalFormatByKey(formatKey);
-    if (!format) throw new Error(`Unknown thermal format: ${formatKey}`);
+  // opts.heightMm is the report's real content height, already measured by
+  // measureThermalReportHeightMm() — @page is written with that concrete
+  // value from the very first paint, exactly like the single-detection
+  // receipt used to do before it moved to canvas rendering. CSS has no real
+  // "auto" page-length keyword usable alongside a fixed width
+  // (`@page { size: 80mm auto }` is invalid and silently falls back to the
+  // browser/driver's default page size), and a fixed page shorter than the
+  // actual content is exactly what was forcing this report onto a second
+  // sheet. If heightMm is omitted (used internally by
+  // measureThermalReportHeightMm's own measurement pass, which throws this
+  // copy away and never prints or previews it), a generous placeholder is
+  // used so the measurement pass itself never clips.
+  buildThermalReportDocument(report, opts = {}) {
     const s = report.summary;
+    const heightMm = opts.heightMm || THERMAL_FORMATS.LONG.height;
 
     const inventoryRows = report.inventory_table.map(r => `
       <tr><td>${this._escape(r.product_name)}</td><td>${r.current_stock}</td><td>${r.initial_stock}</td><td>${r.exited_in_period}</td></tr>`).join('');
@@ -212,10 +223,10 @@ ${this._criticalA4Style()}
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Thermal Report — ${this._escape(report.start_date)} to ${this._escape(report.end_date)}</title>
 ${this._stylesheetTag('thermal', '/css/thermal-print.css')}
-<style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${format.height}mm; margin: 0; }</style>
+<style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${heightMm}mm; margin: 0; }</style>
 ${this._criticalThermalStyle()}
 </head><body>
-<div class="thermal-receipt" style="min-height: ${format.height}mm;">
+<div class="thermal-receipt">
   <div class="thermal-header">
     <div class="brand">VISIONARYAI</div>
     <div class="subtitle">Inventory &amp; Exit Report</div>
@@ -250,8 +261,6 @@ ${this._criticalThermalStyle()}
     <tbody>${exitRows}</tbody>
     <tfoot><tr><td>TOTAL</td><td>${s.total_exited}</td><td>${s.total_exited > 0 ? '100%' : '0%'}</td></tr></tfoot>
   </table>
-
-  <div class="thermal-footer">VisionaryAI &middot; ${format.label}</div>
 </div>
 </body></html>`;
   },
@@ -526,6 +535,47 @@ ${this._criticalThermalStyle()}
     return win;
   },
 
+  // CSS has no real "auto" page-length keyword usable alongside a fixed
+  // width (`@page { size: 80mm auto }` is invalid and silently falls back
+  // to the browser/driver's default page size — verified directly: it
+  // produces a Letter-sized page, not an 80mm-wide one). So the full
+  // report's height is measured from its own rendered content, in a
+  // hidden, off-screen iframe, BEFORE the real print document is ever
+  // created — see buildThermalReportDocument's opts.heightMm.
+  _pxToMm(px) {
+    return px / 96 * 25.4; // CSS spec: 96px == 1in == 25.4mm, always
+  },
+
+  measureThermalReportHeightMm(report) {
+    return new Promise((resolve) => {
+      const probeHtml = this.buildThermalReportDocument(report);
+      const iframe = document.createElement('iframe');
+      iframe.setAttribute('aria-hidden', 'true');
+      iframe.style.cssText = 'position:fixed; top:0; left:-99999px; width:80mm; height:50px; border:0; visibility:hidden;';
+      // srcdoc MUST be set before the iframe is inserted into the DOM — see
+      // the identical note this project already learned the hard way on
+      // the single-detection receipt's own measurement pass.
+      iframe.srcdoc = probeHtml;
+
+      const cleanupAndResolve = (heightMm) => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        resolve(heightMm);
+      };
+
+      iframe.addEventListener('load', () => {
+        try {
+          const el = iframe.contentDocument.querySelector('.thermal-receipt');
+          const heightMm = el ? Math.ceil(this._pxToMm(el.getBoundingClientRect().height)) + 3 : THERMAL_FORMATS.MEDIUM.height;
+          cleanupAndResolve(heightMm);
+        } catch (e) {
+          cleanupAndResolve(THERMAL_FORMATS.MEDIUM.height); // fail-safe: never blocks printing
+        }
+      }, { once: true });
+
+      document.body.appendChild(iframe);
+    });
+  },
+
   _printWindow(win) {
     const doPrint = () => {
       win.focus();
@@ -556,8 +606,9 @@ ${this._criticalThermalStyle()}
     return win;
   },
 
-  printThermal(report, formatKey) {
-    const win = this._openPrintWindow(this.buildThermalReportDocument(report, formatKey));
+  async printThermal(report) {
+    const heightMm = await this.measureThermalReportHeightMm(report);
+    const win = this._openPrintWindow(this.buildThermalReportDocument(report, { heightMm }));
     this._printWindow(win);
     return win;
   },

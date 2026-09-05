@@ -17,11 +17,6 @@ const PrintDialog = {
   _mode: null,           // 'report' | 'receipt'
   _getReportParams: null,
   _detection: null,
-  // Only one thermal report paper size is offered — no selector, nothing
-  // else to configure. Change THERMAL_FORMATS.MEDIUM in printer-config.js
-  // (the single source of truth) if this ever needs to be a different fixed
-  // size again.
-  _thermalFormatKey: THERMAL_FORMATS.MEDIUM.key,
 
   init() {
     const dialog = document.getElementById('printDialog');
@@ -123,11 +118,14 @@ const PrintDialog = {
         widthMm = rendered.widthMm;
         heightMm = rendered.heightMm;
       } else if (this._isThermal()) {
-        const format = getThermalFormatByKey(this._thermalFormatKey);
+        // Same measurement PrintEngine.printThermal() uses for the real
+        // print, so the preview's height is never a guess that could drift
+        // from what actually prints.
         const report = await this._currentReportData();
-        html = PrintEngine.buildThermalReportDocument(report, this._thermalFormatKey);
+        const measuredHeightMm = await PrintEngine.measureThermalReportHeightMm(report);
+        html = PrintEngine.buildThermalReportDocument(report, { heightMm: measuredHeightMm });
         widthMm = PRINTER_CONFIG.printableWidth;
-        heightMm = format.height;
+        heightMm = measuredHeightMm;
       } else {
         const report = await this._currentReportData();
         html = PrintEngine.buildA4ReportDocument(report);
@@ -155,7 +153,7 @@ const PrintDialog = {
         await PrintEngine.printThermalReceipt(this._detection);
       } else if (this._isThermal()) {
         const report = await this._currentReportData();
-        PrintEngine.printThermal(report, this._thermalFormatKey);
+        await PrintEngine.printThermal(report);
       } else {
         const report = await this._currentReportData();
         PrintEngine.printA4(report);

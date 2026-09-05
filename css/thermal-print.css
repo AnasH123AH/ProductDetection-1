@@ -152,6 +152,13 @@ html, body {
   text-align: right;
   overflow-wrap: break-word;
   word-break: break-word;
+  /* Explicit black + bold on every cell, not just thead/tfoot: a real
+     thermal print head renders normal-weight small monospace glyphs as
+     visibly lighter/greyer than bold ones (thin strokes don't get enough
+     heat/ink density), even though the declared color is already pure
+     black. Bolding is what actually fixes the legibility on paper. */
+  color: #000000;
+  font-weight: 700;
 }
 
 .thermal-table th:first-child,
