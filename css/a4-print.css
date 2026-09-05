@@ -129,17 +129,3 @@ html, body {
   justify-content: space-between;
 }
 
-.a4-debug {
-  font-size: 9px;
-  border: 1px dashed #94A3B8;
-  padding: 6px 8px;
-  margin-bottom: 12px;
-  color: #475569;
-  white-space: pre-wrap;
-}
-
-@media print {
-  .a4-debug {
-    display: none;
-  }
-}

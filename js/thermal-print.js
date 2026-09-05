@@ -78,18 +78,6 @@ const PrintEngine = {
     </style>`;
   },
 
-  _debugBlock(mode, cssClass, extra) {
-    if (!extra || !extra.debug) return '';
-    const lines = [
-      `Paper Width: ${PRINTER_CONFIG.paperWidth}mm`,
-      `Printable Width: ${PRINTER_CONFIG.printableWidth}mm`,
-      `Selected Height: ${extra.selectedHeight}`,
-      `Printer: ${mode === 'a4' ? 'A4 / PDF (browser)' : PRINTER_CONFIG.printerName}`,
-      `Print Mode: ${mode.toUpperCase()}`
-    ];
-    return `<div class="${cssClass}">${this._escape(lines.join('\n'))}</div>`;
-  },
-
   // -------------------------------------------------------------------
   // A4 — Inventory & Product Exit Report
   // -------------------------------------------------------------------
@@ -134,8 +122,6 @@ const PrintEngine = {
         </table>`;
     }
 
-    const debug = this._debugBlock('a4', 'a4-debug', opts.debug ? { debug: true, selectedHeight: 'N/A (A4 210 x 297mm)' } : null);
-
     return `<!doctype html>
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Inventory Report — ${this._escape(report.start_date)} to ${this._escape(report.end_date)}</title>
@@ -143,7 +129,6 @@ const PrintEngine = {
 ${this._criticalA4Style()}
 </head><body>
 <div class="a4-report">
-  ${debug}
   <div class="a4-header">
     <div class="brand">VISIONARYAI</div>
     <div class="subtitle">Product Detection &amp; Inventory Report</div>
@@ -201,8 +186,6 @@ ${this._criticalA4Style()}
     const exitRows = report.exit_table.map(r => `
       <tr><td>${this._escape(r.product_name)}</td><td>${r.exits}</td><td>${r.pct}%</td></tr>`).join('');
 
-    const debug = this._debugBlock('thermal', 'thermal-debug', opts.debug ? { debug: true, selectedHeight: `${format.height}mm` } : null);
-
     return `<!doctype html>
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Thermal Report — ${this._escape(report.start_date)} to ${this._escape(report.end_date)}</title>
@@ -210,7 +193,6 @@ ${this._criticalA4Style()}
 <style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${format.height}mm; margin: 0; }</style>
 ${this._criticalThermalStyle()}
 </head><body>
-${debug}
 <div class="thermal-receipt" style="min-height: ${format.height}mm;">
   <div class="thermal-header">
     <div class="brand">VISIONARYAI</div>
@@ -277,11 +259,6 @@ ${debug}
       : detection.confidence;
     const heightMm = opts.heightMm || THERMAL_FORMATS.LONG.height;
 
-    const debug = this._debugBlock('thermal', 'thermal-debug', opts.debug ? {
-      debug: true,
-      selectedHeight: opts.heightMm ? `${opts.heightMm}mm (auto, content-sized)` : 'auto (measuring…)'
-    } : null);
-
     return `<!doctype html>
 <html><head><meta charset="utf-8">
 <title>VisionaryAI Detection Receipt #${this._escape(detection.id)}</title>
@@ -289,7 +266,6 @@ ${debug}
 <style id="thermalPageSize">@page { size: ${PRINTER_CONFIG.paperWidth}mm ${heightMm}mm; margin: 0; }</style>
 ${this._criticalThermalStyle()}
 </head><body>
-${debug}
 <div class="thermal-receipt">
   <div class="thermal-header">
     <div class="brand">VISIONARYAI</div>

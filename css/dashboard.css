@@ -1854,18 +1854,6 @@
   cursor: pointer;
 }
 
-.print-debug-panel {
-  font-size: var(--text-xs);
-  font-family: var(--font-mono);
-  white-space: pre-wrap;
-  background: var(--light-surface-alt);
-  border: 1px dashed var(--light-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  color: var(--text-body);
-  margin-bottom: var(--space-4);
-}
-
 .print-preview-wrap {
   max-height: 480px;
   overflow-y: auto;

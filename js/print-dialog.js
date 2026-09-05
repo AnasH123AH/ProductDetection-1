@@ -28,12 +28,8 @@ const PrintDialog = {
     const closeBtn = document.getElementById('printDialogCloseBtn');
     const previewBtn = document.getElementById('printDialogPreviewBtn');
     const printBtn = document.getElementById('printDialogPrintBtn');
-    const debugToggle = document.getElementById('printDebugToggle');
-    const paperSizeFixedLabel = document.getElementById('paperSizeFixedLabel');
 
     if (!dialog) return;
-
-    paperSizeFixedLabel.textContent = getThermalFormatByKey(this._thermalFormatKey).label;
 
     document.querySelectorAll('input[name="printerType"]').forEach(radio => {
       radio.addEventListener('change', () => {
@@ -41,10 +37,6 @@ const PrintDialog = {
         this.refreshPreview();
       });
     });
-
-    if (debugToggle) {
-      debugToggle.addEventListener('change', () => this.refreshPreview());
-    }
 
     if (closeBtn) closeBtn.addEventListener('click', () => this.close());
     dialog.addEventListener('click', (e) => {
@@ -68,14 +60,7 @@ const PrintDialog = {
 
   _syncSectionVisibility() {
     const printerTypeSection = document.getElementById('printerTypeSection');
-    const paperSizeSection = document.getElementById('paperSizeSection');
-    if (this._mode === 'receipt') {
-      printerTypeSection.style.display = 'none';
-      paperSizeSection.style.display = 'none';
-    } else {
-      printerTypeSection.style.display = '';
-      paperSizeSection.style.display = this._isThermal() ? '' : 'none';
-    }
+    printerTypeSection.style.display = this._mode === 'receipt' ? 'none' : '';
   },
 
   openForReport(getReportParams) {
@@ -124,55 +109,34 @@ const PrintDialog = {
 
   async refreshPreview() {
     const frame = document.getElementById('printPreviewFrame');
-    const debugPanel = document.getElementById('printDebugPanel');
-    const debugToggle = document.getElementById('printDebugToggle');
-    const showDebug = !!(debugToggle && debugToggle.checked);
 
     try {
-      let html, widthMm, heightMm, selectedHeightLabel, printMode;
+      let html, widthMm, heightMm;
 
       if (this._mode === 'receipt') {
         // Same measurement PrintEngine.printThermalReceipt() uses for the
         // real print, so the preview's height is never a guess that could
         // drift from what actually prints.
-        const measuredHeightMm = await PrintEngine.measureThermalReceiptHeightMm(this._detection, { debug: showDebug });
-        html = PrintEngine.buildThermalReceiptDocument(this._detection, { debug: showDebug, heightMm: measuredHeightMm });
+        const measuredHeightMm = await PrintEngine.measureThermalReceiptHeightMm(this._detection);
+        html = PrintEngine.buildThermalReceiptDocument(this._detection, { heightMm: measuredHeightMm });
         widthMm = PRINTER_CONFIG.printableWidth;
         heightMm = measuredHeightMm;
-        selectedHeightLabel = `${measuredHeightMm}mm (auto, content-sized)`;
-        printMode = 'THERMAL';
       } else if (this._isThermal()) {
         const format = getThermalFormatByKey(this._thermalFormatKey);
         const report = await this._currentReportData();
-        html = PrintEngine.buildThermalReportDocument(report, this._thermalFormatKey, { debug: showDebug });
+        html = PrintEngine.buildThermalReportDocument(report, this._thermalFormatKey);
         widthMm = PRINTER_CONFIG.printableWidth;
         heightMm = format.height;
-        selectedHeightLabel = `${format.height}mm`;
-        printMode = 'THERMAL';
       } else {
         const report = await this._currentReportData();
-        html = PrintEngine.buildA4ReportDocument(report, { debug: showDebug });
+        html = PrintEngine.buildA4ReportDocument(report);
         widthMm = A4_FORMAT.width;
         heightMm = A4_FORMAT.height;
-        selectedHeightLabel = `${A4_FORMAT.height}mm (A4)`;
-        printMode = 'A4';
       }
 
       frame.style.width = `${widthMm}mm`;
       frame.style.height = `${heightMm}mm`;
       frame.srcdoc = html;
-
-      if (showDebug) {
-        debugPanel.hidden = false;
-        debugPanel.textContent =
-          `Paper Width: ${PRINTER_CONFIG.paperWidth}mm\n` +
-          `Printable Width: ${PRINTER_CONFIG.printableWidth}mm\n` +
-          `Selected Height: ${selectedHeightLabel}\n` +
-          `Printer: ${printMode === 'A4' ? 'A4 / PDF (browser)' : PRINTER_CONFIG.printerName}\n` +
-          `Print Mode: ${printMode}`;
-      } else {
-        debugPanel.hidden = true;
-      }
     } catch (err) {
       frame.srcdoc = `<p style="font-family: sans-serif; color: #B91C1C; padding: 12px;">${this._escape(err.message || 'Failed to build preview.')}</p>`;
       if (typeof showToast === 'function') showToast(err.message || 'Failed to build print preview.', 'danger');

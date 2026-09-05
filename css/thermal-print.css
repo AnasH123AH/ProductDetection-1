@@ -190,22 +190,9 @@ html, body {
   color: #334155;
 }
 
-.thermal-debug {
-  font-size: 7px;
-  border: 1px dashed #94A3B8;
-  padding: 1mm;
-  margin-bottom: 2mm;
-  color: #475569;
-  white-space: pre-wrap;
-}
-
 @media print {
   html, body {
     width: 80mm;
-  }
-
-  .thermal-debug {
-    display: none;
   }
 
   /* No page-break rules anywhere in this stylesheet on purpose — the
