@@ -17,6 +17,10 @@ const PrintDialog = {
   _mode: null,           // 'report' | 'receipt'
   _getReportParams: null,
   _detection: null,
+  // Only one thermal report paper size is offered — no selector, nothing
+  // else to configure. Change THERMAL_FORMATS.MEDIUM in printer-config.js
+  // (the single source of truth) if this ever needs to be a different fixed
+  // size again.
   _thermalFormatKey: THERMAL_FORMATS.MEDIUM.key,
 
   init() {
@@ -25,25 +29,17 @@ const PrintDialog = {
     const previewBtn = document.getElementById('printDialogPreviewBtn');
     const printBtn = document.getElementById('printDialogPrintBtn');
     const debugToggle = document.getElementById('printDebugToggle');
-    const paperSizeSelect = document.getElementById('paperSizeSelect');
+    const paperSizeFixedLabel = document.getElementById('paperSizeFixedLabel');
 
     if (!dialog) return;
 
-    // A dropdown shows only the currently selected paper size — the other
-    // two options exist but aren't visible at once, unlike a radio row.
-    paperSizeSelect.innerHTML = Object.values(THERMAL_FORMATS).map(f => `
-      <option value="${f.key}" ${f.key === this._thermalFormatKey ? 'selected' : ''}>${this._escape(f.label)}</option>
-    `).join('');
+    paperSizeFixedLabel.textContent = getThermalFormatByKey(this._thermalFormatKey).label;
 
     document.querySelectorAll('input[name="printerType"]').forEach(radio => {
       radio.addEventListener('change', () => {
         this._syncSectionVisibility();
         this.refreshPreview();
       });
-    });
-    paperSizeSelect.addEventListener('change', () => {
-      this._thermalFormatKey = paperSizeSelect.value;
-      this.refreshPreview();
     });
 
     if (debugToggle) {
