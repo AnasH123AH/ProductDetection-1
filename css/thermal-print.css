@@ -19,6 +19,12 @@
 
 * {
   box-sizing: border-box;
+  /* Some browsers/drivers "economize" print colors — lightening or
+     re-tinting anything that isn't already pure black to save ink. Force
+     every color on this receipt to render exactly as declared, so a real
+     thermal printer can't silently shift it toward gray/amber/sepia. */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 html, body {
@@ -27,7 +33,7 @@ html, body {
   width: 80mm;
   background: #FFFFFF;
   font-family: 'Courier New', 'JetBrains Mono', monospace;
-  color: #0F172A;
+  color: #000000;
 }
 
 .thermal-receipt {
@@ -39,8 +45,12 @@ html, body {
   line-height: 1.5;
 }
 
+/* Every text-bearing element gets an EXPLICIT color instead of relying on
+   inheritance from body — belt-and-suspenders against any print pipeline
+   that treats an inherited vs. directly-set color differently. */
 .thermal-receipt * {
   max-width: 100%;
+  color: #000000;
 }
 
 .thermal-header {
@@ -58,7 +68,7 @@ html, body {
   font-size: 11px;
   font-weight: 700;
   margin-top: 1mm;
-  color: #0F172A;
+  color: #000000;
 }
 
 /* Full-report meta block (Period/Days/Generated) — compact, tabular
@@ -98,7 +108,7 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #0F172A;
+  color: #000000;
 }
 
 .thermal-field-value {
@@ -112,12 +122,12 @@ html, body {
 .thermal-field-value.secondary {
   font-size: 11px;
   font-weight: 700;
-  color: #0F172A;
+  color: #000000;
 }
 
 .thermal-divider {
   border: none;
-  border-top: 1px dashed #0F172A;
+  border-top: 1px dashed #000000;
   margin: 2.5mm 0;
 }
 
@@ -150,12 +160,12 @@ html, body {
 }
 
 .thermal-table thead th {
-  border-bottom: 1px solid #0F172A;
+  border-bottom: 1px solid #000000;
   font-weight: 700;
 }
 
 .thermal-table tfoot td {
-  border-top: 1px solid #0F172A;
+  border-top: 1px solid #000000;
   font-weight: 700;
 }
 
@@ -172,7 +182,7 @@ html, body {
 
 .thermal-summary-row .label {
   font-weight: 700;
-  color: #0F172A;
+  color: #000000;
 }
 
 .thermal-summary-row .value {
@@ -184,7 +194,7 @@ html, body {
   font-weight: 700;
   text-align: center;
   margin-top: 2mm;
-  color: #0F172A;
+  color: #000000;
 }
 
 .thermal-footer {
@@ -192,7 +202,7 @@ html, body {
   font-size: 11px;
   font-weight: 700;
   margin-top: 3.5mm;
-  color: #0F172A;
+  color: #000000;
 }
 
 @media print {
