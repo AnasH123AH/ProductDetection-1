@@ -191,6 +191,29 @@ def detect_image(image_input, conf_threshold=0.70, iou_threshold=0.45, max_detec
         "status": "success"
     }
 
+# Opt-in diagnostic mode for Live Detection — set VISIONARY_DEBUG_DETECTION=1
+# in the environment before starting backend/app.py. Off by default: zero
+# behavior change, zero overhead. On: detect_and_track() additionally runs
+# YOLO at a much lower diagnostic confidence (DEBUG_PROBE_CONF) purely to
+# SEE what the model actually output before the real 0.70 hard floor ever
+# applies, and logs every raw box (class, confidence, bbox size, and — for
+# anything the real filters would reject — exactly why. This is the one way
+# to answer "does YOLO not see the product, or does the app's own filtering
+# reject a real detection" (they look identical from the UI alone), since
+# passing conf=0.70 straight into model.track() means anything below 70%
+# never even comes back from Ultralytics for Python to inspect.
+# The actual `detections` returned/tracked/saved are computed identically to
+# when this flag is off — debug mode only ever adds visibility, never
+# changes what gets detected.
+DEBUG_DETECTION = os.environ.get('VISIONARY_DEBUG_DETECTION', '').strip().lower() in ('1', 'true', 'on', 'yes')
+DEBUG_PROBE_CONF = 0.25
+
+
+def _debug_log(msg):
+    if DEBUG_DETECTION:
+        print(f"[DEBUG-DETECT] {msg}")
+
+
 def detect_and_track(image_input, conf_threshold=0.70, iou_threshold=0.45, max_detections=10, min_detection_size=20):
     """
     Same filtering/output shape as detect_image(), but runs Ultralytics'
@@ -215,21 +238,32 @@ def detect_and_track(image_input, conf_threshold=0.70, iou_threshold=0.45, max_d
     img = load_image(image_input)
     w, h = img.size
 
+    # In debug mode, probe at a low confidence so filtered-out boxes are
+    # still visible to log — production behavior (what actually gets
+    # returned) is unaffected; see the second pass below.
+    probe_conf = DEBUG_PROBE_CONF if DEBUG_DETECTION else effective_conf
+    _debug_log(f"frame received: {w}x{h}px (this is exactly what the model sees — verify it matches the real camera aspect ratio, not a stretched one)")
+
     detections = []
 
     if yolo_model is not None:
         try:
             results = yolo_model.track(
-                img, conf=effective_conf, iou=iou_threshold, max_det=max_det,
+                img, conf=probe_conf, iou=iou_threshold, max_det=max_det,
                 persist=True, tracker="bytetrack.yaml", verbose=False
             )
+            raw_count = 0
             for r in results:
                 boxes = r.boxes
+                raw_count += len(boxes)
                 for box in boxes:
                     cls_id = int(box.cls[0].item())
                     conf = float(box.conf[0].item())
+                    cls_name = CLASSES.get(cls_id, yolo_model.names.get(cls_id, f"Class_{cls_id}"))
 
                     if conf < HARD_CONFIDENCE_THRESHOLD or conf < effective_conf:
+                        _debug_log(f"REJECTED {cls_name}: confidence {conf:.3f} < required {max(HARD_CONFIDENCE_THRESHOLD, effective_conf):.2f} "
+                                   f"(YOLO DID see it — this is the app's confidence filter, not a detection failure)")
                         continue
 
                     xyxy = box.xyxy[0].tolist()
@@ -237,9 +271,10 @@ def detect_and_track(image_input, conf_threshold=0.70, iou_threshold=0.45, max_d
                     box_h = xyxy[3] - xyxy[1]
 
                     if box_w < min_size or box_h < min_size:
+                        _debug_log(f"REJECTED {cls_name}: box {box_w:.0f}x{box_h:.0f}px < min_detection_size {min_size}px "
+                                   f"(confidence was {conf:.3f} — passed the confidence check, rejected on size)")
                         continue
 
-                    cls_name = CLASSES.get(cls_id, yolo_model.names.get(cls_id, f"Class_{cls_id}"))
                     norm_bbox = [
                         round(max(0.0, xyxy[0] / w), 4),
                         round(max(0.0, xyxy[1] / h), 4),
@@ -247,6 +282,7 @@ def detect_and_track(image_input, conf_threshold=0.70, iou_threshold=0.45, max_d
                         round(min(1.0, xyxy[3] / h), 4)
                     ]
                     track_id = int(box.id[0].item()) if box.id is not None else None
+                    _debug_log(f"ACCEPTED {cls_name}: confidence {conf:.3f}, box {box_w:.0f}x{box_h:.0f}px, track_id={track_id}")
                     detections.append({
                         "class": cls_name,
                         "class_id": cls_id,
@@ -256,12 +292,17 @@ def detect_and_track(image_input, conf_threshold=0.70, iou_threshold=0.45, max_d
                         "color": CLASS_COLORS.get(cls_name, "#0284C7"),
                         "track_id": track_id
                     })
+            if DEBUG_DETECTION:
+                _debug_log(f"raw boxes from YOLO (probe conf={probe_conf}): {raw_count} -> accepted after real filters: {len(detections)}")
         except Exception as e:
             print(f"[Detector] YOLO track error: {e}")
             detections = []
     else:
         print("[Detector] Warning: yolo_model is None during tracked detection.")
 
+    # Production filter — identical whether debug mode is on or off. In
+    # debug mode this is a no-op (the loop above already only appended boxes
+    # that pass it); it's the one and only gate when debug mode is off.
     detections = [d for d in detections if d.get("confidence", 0.0) >= HARD_CONFIDENCE_THRESHOLD][:max_det]
 
     latency = round((time.time() - start_time) * 1000, 1)

@@ -37,7 +37,16 @@ const LiveDetectModule = {
     duplicate_prevention: "ON",
     detection_cooldown: 1.0,
     object_tracking_enabled: "ON",
-    max_missed_frames: 5,
+    // At the ~240ms live inference cadence, 5 missed frames was only ~1.2s
+    // of tolerance before a still-present, already-confirmed product was
+    // treated as having exited — too little margin for a real product to
+    // briefly dip below the confidence floor on one or two frames (motion
+    // blur, a momentary angle change) without a genuinely wrong "exit" being
+    // recorded. 8 frames (~1.9s) gives more room for that, without loosening
+    // what counts as a valid detection on any single frame — it only changes
+    // how patient the tracker is about a gap in an object it has already
+    // confirmed, never what creates a new detection or what gets saved.
+    max_missed_frames: 8,
     save_detection_history: "ON",
     save_detection_images: "OFF",
     display_bounding_boxes: "ON",
@@ -158,7 +167,7 @@ const LiveDetectModule = {
     this.settings.duplicate_prevention = newSettings.duplicate_prevention || "ON";
     this.settings.detection_cooldown = parseFloat(newSettings.detection_cooldown || "1.0");
     this.settings.object_tracking_enabled = newSettings.object_tracking_enabled || "ON";
-    this.settings.max_missed_frames = parseInt(newSettings.max_missed_frames || "5", 10);
+    this.settings.max_missed_frames = parseInt(newSettings.max_missed_frames || "8", 10);
     this.settings.save_detection_history = newSettings.save_detection_history || "ON";
     this.settings.save_detection_images = newSettings.save_detection_images || "OFF";
 
@@ -360,13 +369,37 @@ const LiveDetectModule = {
   async processVideoFrame() {
     if (!this.videoEl || this.videoEl.readyState < 2) return;
 
-    // Draw frame to offscreen canvas
+    // Draw frame to offscreen canvas, preserving the camera's real aspect
+    // ratio. This used to be a hardcoded 640x480 (4:3) destination — but the
+    // default/documented camera setup is 1280x720 (16:9), and every other
+    // selectable resolution (1920x1080) is 16:9 too. drawImage() into a
+    // differently-shaped destination doesn't crop or pad, it STRETCHES: a
+    // 16:9 frame squashed into 4:3 compresses width by 0.5x while only
+    // compressing height by 0.667x, non-uniformly warping every product's
+    // true proportions before the model ever sees them. That's silent and
+    // constant on every live frame — unlike the snapshot capture path
+    // (captureSnapshot(), below) and the image-upload path, which both
+    // already draw at native resolution and were never affected. A model
+    // trained on undistorted product photos can only be hurt by this, never
+    // helped, and a product whose real proportions are furthest from square
+    // (i.e. not incidentally close to the 640x480 target ratio already)
+    // absorbs the most warping — consistent with one product failing far
+    // more than the others. Scaling down proportionally (capped at 640px on
+    // the long edge, matching the previous payload size/bandwidth) removes
+    // that distortion entirely while keeping frame transfer cost the same.
+    const videoW = this.videoEl.videoWidth || 1280;
+    const videoH = this.videoEl.videoHeight || 720;
+    const captureScale = Math.min(1, 640 / Math.max(videoW, videoH));
     const offCanvas = document.createElement('canvas');
-    offCanvas.width = 640;
-    offCanvas.height = 480;
+    offCanvas.width = Math.max(1, Math.round(videoW * captureScale));
+    offCanvas.height = Math.max(1, Math.round(videoH * captureScale));
     const offCtx = offCanvas.getContext('2d');
     offCtx.drawImage(this.videoEl, 0, 0, offCanvas.width, offCanvas.height);
     const frameData = offCanvas.toDataURL('image/jpeg', 0.8);
+
+    if (window.VISIONARY_DEBUG_DETECTION) {
+      console.debug(`[LiveDetect] native=${videoW}x${videoH} sent=${offCanvas.width}x${offCanvas.height} (aspect-preserving, no distortion)`);
+    }
 
     const startTime = performance.now();
     try {
@@ -427,10 +460,20 @@ const LiveDetectModule = {
         if (normConf >= 0.70 && normConf >= effectiveConf && boxW >= effectiveMinSize && boxH >= effectiveMinSize) {
           det.confidence = normConf;
           validDetections.push(det);
+        } else if (window.VISIONARY_DEBUG_DETECTION) {
+          const reasons = [];
+          if (normConf < 0.70) reasons.push(`below hard floor 70% (${Math.round(normConf * 100)}%)`);
+          else if (normConf < effectiveConf) reasons.push(`below configured threshold ${Math.round(effectiveConf * 100)}% (${Math.round(normConf * 100)}%)`);
+          if (boxW < effectiveMinSize || boxH < effectiveMinSize) reasons.push(`box ${Math.round(boxW)}x${Math.round(boxH)}px below min size ${effectiveMinSize}px`);
+          console.debug(`[LiveDetect] rejected ${det.class}: ${reasons.join('; ')}`);
         }
       }
 
       this.currentDetections = validDetections.slice(0, effectiveMaxDet);
+
+      if (window.VISIONARY_DEBUG_DETECTION) {
+        console.debug(`[LiveDetect] raw=${rawDetections.length} valid=${this.currentDetections.length} activeTracks=${activeTracks.length} exited=${exitedTracks.length}`);
+      }
 
       // Prefer a track that's actually reached TRACKING state (confirmed
       // stable) for the telemetry readout, so the UI doesn't flicker onto a
