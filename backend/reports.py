@@ -210,10 +210,14 @@ def generate_report_data(period, start=None, end=None):
 
 BRAND_PRIMARY = "#0284C7"
 BRAND_PRIMARY_DARK = "#0369A1"
-BRAND_INK = "#0F172A"
-BRAND_MUTED = "#64748B"
 BRAND_BORDER = "#E2E8F0"
 BRAND_SURFACE = "#F8FAFC"
+
+# All PDF TEXT is pure black — no navy/gray/muted text colors. BRAND_PRIMARY*
+# above is kept only for non-text decoration (the bar chart fills);
+# BRAND_TEXT is the single color every Paragraph/table TEXTCOLOR/canvas
+# fillColor used for text below.
+BRAND_TEXT = "#000000"
 
 
 def _fmt_date_long(d):
@@ -248,19 +252,19 @@ def render_pdf(data):
 
     styles = getSampleStyleSheet()
     h_title = ParagraphStyle("VAITitle", parent=styles["Heading1"], fontSize=20, leading=24,
-                              textColor=colors.HexColor(BRAND_INK), spaceAfter=2)
+                              textColor=colors.HexColor(BRAND_TEXT), fontName="Helvetica-Bold", spaceAfter=2)
     h_sub = ParagraphStyle("VAISub", parent=styles["Normal"], fontSize=11, leading=14,
-                            textColor=colors.HexColor(BRAND_MUTED), spaceAfter=0)
+                            textColor=colors.HexColor(BRAND_TEXT), spaceAfter=0)
     h_section = ParagraphStyle("VAISection", parent=styles["Heading2"], fontSize=13, leading=16,
-                                textColor=colors.HexColor(BRAND_INK), spaceBefore=14, spaceAfter=8)
+                                textColor=colors.HexColor(BRAND_TEXT), fontName="Helvetica-Bold", spaceBefore=14, spaceAfter=8)
     p_body = ParagraphStyle("VAIBody", parent=styles["Normal"], fontSize=9.5, leading=13,
-                             textColor=colors.HexColor(BRAND_INK))
+                             textColor=colors.HexColor(BRAND_TEXT))
     p_muted = ParagraphStyle("VAIMuted", parent=styles["Normal"], fontSize=9, leading=12,
-                              textColor=colors.HexColor(BRAND_MUTED))
+                              textColor=colors.HexColor(BRAND_TEXT))
     stat_label = ParagraphStyle("VAIStatLabel", parent=styles["Normal"], fontSize=8, leading=10,
-                                 textColor=colors.white, alignment=TA_CENTER)
+                                 textColor=colors.HexColor(BRAND_TEXT), fontName="Helvetica-Bold", alignment=TA_CENTER)
     stat_value = ParagraphStyle("VAIStatValue", parent=styles["Normal"], fontSize=18, leading=22,
-                                 textColor=colors.white, alignment=TA_CENTER, fontName="Helvetica-Bold")
+                                 textColor=colors.HexColor(BRAND_TEXT), alignment=TA_CENTER, fontName="Helvetica-Bold")
 
     story = []
 
@@ -291,12 +295,15 @@ def render_pdf(data):
         rowHeights=[18, 30],
     )
     card_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(BRAND_PRIMARY_DARK)),
+        # Was a solid dark-blue fill with white text; now a light neutral
+        # fill so the now-black stat_label/stat_value text stays readable
+        # (black text needs a light background, not a dark one).
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(BRAND_SURFACE)),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("TOPPADDING", (0, 0), (-1, 0), 8),
         ("BOTTOMPADDING", (0, -1), (-1, -1), 10),
-        ("LINEAFTER", (0, 0), (-2, -1), 1, colors.white),
-        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor(BRAND_PRIMARY_DARK)),
+        ("LINEAFTER", (0, 0), (-2, -1), 1, colors.HexColor(BRAND_BORDER)),
+        ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor(BRAND_TEXT)),
     ]))
     story.append(card_table)
     story.append(Spacer(1, 18))
@@ -426,7 +433,7 @@ def render_pdf(data):
             self.setLineWidth(0.5)
             self.line(2 * cm, 1.6 * cm, A4[0] - 2 * cm, 1.6 * cm)
             self.setFont("Helvetica", 8)
-            self.setFillColor(colors.HexColor(BRAND_MUTED))
+            self.setFillColor(colors.HexColor(BRAND_TEXT))
             self.drawString(2 * cm, 1.2 * cm, "VisionaryAI — Product Detection & Inventory Report")
             self.drawRightString(A4[0] - 2 * cm, 1.2 * cm, f"Page {self._pageNumber} of {total_pages}")
             self.restoreState()
@@ -454,15 +461,23 @@ def _table_style(header=True, total_row=None):
         ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]
+    style += [
+        # Explicit black on every data row too — belt and suspenders rather
+        # than relying on ReportLab's own default text color.
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor(BRAND_TEXT)),
+    ]
     if header:
         style += [
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(BRAND_PRIMARY)),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            # Was a solid blue fill with white header text; now a light
+            # neutral fill so the header stays pure black and legible.
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(BRAND_SURFACE)),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor(BRAND_TEXT)),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ]
     if total_row is not None:
         style += [
             ("BACKGROUND", (0, total_row), (-1, total_row), colors.HexColor(BRAND_SURFACE)),
+            ("TEXTCOLOR", (0, total_row), (-1, total_row), colors.HexColor(BRAND_TEXT)),
             ("FONTNAME", (0, total_row), (-1, total_row), "Helvetica-Bold"),
         ]
     return TableStyle(style)
