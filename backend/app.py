@@ -227,7 +227,7 @@ class VisionaryAPIHandler(BaseHTTPRequestHandler):
 
             if use_tracking:
                 required_stable_frames = int(payload.get('required_stable_frames', 3)) if str(payload.get('detection_stability', 'ON')).upper() != 'OFF' else 1
-                max_missed_frames = int(payload.get('max_missed_frames', 8))
+                max_missed_frames = int(payload.get('max_missed_frames', 5))
                 duplicate_cooldown = float(payload.get('detection_cooldown', 1.0)) if str(payload.get('duplicate_prevention', 'ON')).upper() != 'OFF' else 0.0
 
                 try:
