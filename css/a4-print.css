@@ -10,6 +10,17 @@
 
 * {
   box-sizing: border-box;
+  /* Without this, Chrome's print pipeline is free to "economize" —
+     dropping background colors/tints (and desaturating other declared
+     colors) even when the user's print dialog Color option is set to
+     Couleur — that's what silently strips this report's intended color
+     accents. This tells Chrome/the OS print driver to send every declared
+     color through untouched instead. Selecting Noir et blanc in the OS
+     print dialog still forces grayscale on top of this, as expected —
+     this only stops Chrome/CSS from pre-emptively discarding color before
+     that dialog choice is even applied. */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 @page {
@@ -21,7 +32,10 @@ html, body {
   margin: 0;
   padding: 0;
   background: #FFFFFF;
-  color: #0F172A;
+  /* Pure black — every text color in this stylesheet reads from this same
+     value (no navy/gray/muted variants) via inheritance or an explicit
+     override below. */
+  color: #000000;
   font-family: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif;
 }
 
@@ -39,12 +53,14 @@ html, body {
 
 .a4-header .subtitle {
   font-size: 13px;
-  color: #64748B;
+  color: #000000;
+  font-weight: 500;
   margin-top: 2px;
 }
 
 .a4-meta {
   font-size: 11px;
+  font-weight: 500;
   margin-top: 10px;
   line-height: 1.6;
 }
@@ -63,8 +79,17 @@ html, body {
 }
 
 .a4-stat-card {
-  background: #0369A1;
-  color: #FFFFFF;
+  /* Was a solid dark-blue fill with white text. Text must be pure black
+     now (see .stat-label/.stat-value below), and black text on a fill
+     this dark would be nearly unreadable — so the fill became a light
+     neutral tint and the brand blue moved to an intentional decorative
+     accent border instead. That border is real color content (unaffected
+     by the black-text requirement) and — with print-color-adjust: exact
+     above — is what actually survives into a Couleur print/PDF. */
+  background: #F8FAFC;
+  color: #000000;
+  border: 1px solid #E2E8F0;
+  border-top: 3px solid #0284C7;
   border-radius: 6px;
   padding: 10px 8px;
   text-align: center;
@@ -72,14 +97,18 @@ html, body {
 
 .a4-stat-card .stat-label {
   font-size: 8px;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  opacity: 0.9;
+  color: #000000;
+  /* No opacity here — a <1 opacity on black text renders as gray, exactly
+     what pure-black text must not do. */
 }
 
 .a4-stat-card .stat-value {
   font-size: 18px;
   font-weight: 700;
+  color: #000000;
   margin-top: 2px;
 }
 
@@ -95,6 +124,8 @@ html, body {
   padding: 6px 8px;
   text-align: right;
   border: 1px solid #E2E8F0;
+  color: #000000;
+  font-weight: 500;
 }
 
 .a4-table th:first-child,
@@ -103,19 +134,25 @@ html, body {
 }
 
 .a4-table thead th {
-  background: #0284C7;
-  color: #FFFFFF;
+  /* Was a solid blue fill with white text; now a light neutral fill with
+     black text plus a colored bottom-border accent, same rationale as
+     .a4-stat-card above. */
+  background: #F8FAFC;
+  color: #000000;
   font-weight: 700;
+  border-bottom: 2px solid #0284C7;
 }
 
 .a4-table tfoot td {
   background: #F8FAFC;
+  color: #000000;
   font-weight: 700;
 }
 
 .a4-note {
   font-size: 11px;
-  color: #334155;
+  font-weight: 500;
+  color: #000000;
   margin: 6px 0;
 }
 
@@ -124,7 +161,8 @@ html, body {
   padding-top: 8px;
   border-top: 1px solid #E2E8F0;
   font-size: 9px;
-  color: #64748B;
+  font-weight: 500;
+  color: #000000;
   display: flex;
   justify-content: space-between;
 }
